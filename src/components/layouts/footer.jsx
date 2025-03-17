@@ -1,12 +1,18 @@
 import React from 'react';
-import styled from 'styled-components';
+import { Layout } from 'antd';
 
-const Footer = () => {
-    return (
-        <FooterContainer>
-            <p>Copyright &copy; 2025 University of Greenwich</p>
-        </FooterContainer>
-    )
-}
+const { Footer } = Layout;
 
-export default Footer;
+const AppFooter = () => {
+  return (
+    <Footer
+      style={{
+        textAlign: 'center',
+      }}
+    >
+      eTutoring ©{new Date().getFullYear()} Created by University of Greenwich
+    </Footer>
+  );
+};
+
+export default AppFooter;
