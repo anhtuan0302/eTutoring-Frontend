@@ -9,7 +9,7 @@ const content = (
 const CreateTutor = () => {
 
   return (
-    <AdminLayout title="Danh sách Tutor" children={content}>
+    <AdminLayout title="List Tutor" children={content}>
     </AdminLayout>
   );
 };

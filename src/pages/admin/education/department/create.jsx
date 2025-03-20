@@ -1,16 +1,21 @@
 import React, { useState } from "react";
 import { Form, Input, Button, message } from "antd";
+import { useNavigate } from "react-router-dom";
 import { createDepartment } from "../../../../api/education/department";
 import AdminLayout from "../../../../components/layouts/admin/layout";
 
 const CreateDepartment = () => {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate(); // Thêm useNavigate để điều hướng
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
       await createDepartment(values);
       message.success("Department created successfully!");
+      setTimeout(() => {
+        navigate("/admin/department"); // Chuyển hướng về trang danh sách
+      }); // Đợi 1 giây để người dùng thấy thông báo
     } catch (error) {
       message.error("Failed to create department");
     } finally {

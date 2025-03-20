@@ -54,7 +54,7 @@ const ListTutor = () => {
       render: (user_id) => user_id || "N/A",
     },
     {
-        title: "Khoa",
+        title: "Department",
         dataIndex: "department_id",
         key: "department_id",
         render: (department) => {
@@ -63,19 +63,19 @@ const ListTutor = () => {
         },
       },           
     {
-      title: "Trạng thái",
+      title: "Status",
       dataIndex: "is_deleted",
       key: "is_deleted",
       render: (is_deleted) => (
         <Tag color={is_deleted ? "red" : "green"}>
-          {is_deleted ? "Đã xóa" : "Hoạt động"}
+          {is_deleted ? "Delete" : "Active"}
         </Tag>
       ),
     },
   ];
 
   return (
-    <AdminLayout title="Danh sách Tutor">
+    <AdminLayout title="List Tutor">
       <Table columns={columns} dataSource={tutors} rowKey="_id" loading={loading} />
     </AdminLayout>
   );

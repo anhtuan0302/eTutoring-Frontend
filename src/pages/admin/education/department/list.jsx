@@ -45,12 +45,12 @@ const ListDepartment = () => {
       key: "description",
     },
     {
-      title: "Trạng thái",
+      title: "Status",
       dataIndex: "is_deleted",
       key: "is_deleted",
       render: (is_deleted) => (
         <Tag color={is_deleted ? "red" : "green"}>
-          {is_deleted ? "Đã xóa" : "Hoạt động"}
+          {is_deleted ? "Đã xóa" : "Active"}
         </Tag>
       ),
     },
@@ -60,7 +60,7 @@ const ListDepartment = () => {
       render: (_, record) => (
         <>
           <Button type="link" onClick={() => navigate(`/admin/department/${record._id}`)}>
-            Chỉnh sửa
+            Edit
           </Button>
           <Popconfirm
             title="Bạn có chắc muốn xóa không?"
@@ -69,7 +69,7 @@ const ListDepartment = () => {
             cancelText="Không"
           >
             <Button type="link" danger>
-              Xóa
+              Delete
             </Button>
           </Popconfirm>
         </>
@@ -78,7 +78,12 @@ const ListDepartment = () => {
   ];
 
   return (
-    <AdminLayout title="Danh sách Department">
+    <AdminLayout title="List Department">
+      <div style={{ marginBottom: 16 }}>
+        <Button type="primary" onClick={() => navigate("/admin/department/create")}>
+          New Department
+        </Button>
+      </div>
       <Table columns={columns} dataSource={departments} rowKey="_id" loading={loading} />
     </AdminLayout>
   );
