@@ -9,7 +9,7 @@ const content = (
 
 const Dashboard = () => {
   return (
-    <AdminLayout title="Dashboard" breadcrumb="Dashboard" children={content} />
+    <AdminLayout title="Dashboard" children={content} />
   );
 };
 
