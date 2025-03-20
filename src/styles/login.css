@@ -1,0 +1,101 @@
+/* Layout styles */
+.login-container {
+    min-height: 100vh;
+  }
+  
+  .login-form-col {
+    padding: 40px;
+  }
+  
+  .login-form-wrapper {
+    max-width: 450px;
+    margin: 0 auto;
+  }
+  
+  .login-image-col {
+    background: #e6f7ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+  }
+  
+  .login-image {
+    max-width: 100%;
+    max-height: 80vh;
+  }
+  
+  /* Logo styles */
+  .logo-container {
+    margin-bottom: 40px;
+  }
+  
+  .logo-text {
+    color: #1890ff;
+    font-size: 24px;
+    font-weight: bold;
+  }
+  
+  .logo-accent {
+    background-color: #1890ff;
+    color: white;
+    padding: 5px;
+    margin-right: 5px;
+  }
+  
+  /* Typography styles */
+  .welcome-title {
+    margin-bottom: 10px;
+  }
+  
+  .welcome-subtitle {
+    display: block;
+    margin-bottom: 30px;
+  }
+  
+  /* Form styles */
+  .login-button {
+    height: 45px;
+    background-color: #1890ff;
+    border-color: #1890ff;
+  }
+  
+  .social-button {
+    height: 45px;
+    border: 1px solid #d9d9d9;
+  }
+  
+  .back-button {
+    margin-left: -12px;
+    color: #1890ff;
+  }
+  
+  .form-footer {
+    text-align: center;
+    margin-top: 20px;
+  }
+  
+  /* OTP Input styles */
+  .otp-input-container {
+    width: 60%;
+    justify-content: space-between;
+  }
+  
+  .otp-input {
+    width: 52px;
+    height: 52px;
+    margin: 0 6px;
+    border-radius: 8px;
+    font-size: 18px;
+    text-align: center;
+  }
+  
+  .resend-link-container {
+    text-align: center;
+    margin-bottom: 20px;
+  }
+  
+  .form-button-group {
+    width: 100%;
+    justify-content: space-between;
+  }

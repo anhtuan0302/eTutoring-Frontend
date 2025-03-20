@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Checkbox, Row, Col, Typography, Divider, Space } from 'antd';
+import { Form, Input, Button, Checkbox, Row, Col, Typography, Divider, Space, message } from 'antd';
 import { UserOutlined, LockOutlined, GoogleOutlined, MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { login, getAdmin } from '../api/user/admin';
+import '../styles/login.css';
 //import loginImage from '../assets/login-illustration.svg'; // Thay đổi path tới hình ảnh của bạn
 
 const { Title, Text, Paragraph } = Typography;
@@ -10,11 +12,35 @@ const Login = () => {
   const [currentForm, setCurrentForm] = useState('login'); // 'login' hoặc 'forgotPassword'
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   // Hàm xử lý đăng nhập
-  const handleLogin = (values) => {
-    console.log('Login values:', values);
-    // Gọi API đăng nhập tại đây
+  const handleLogin = async (values) => {
+    try {
+      setLoading(true);
+      
+      // Gọi API đăng nhập
+      const loginData = await login(values.email, values.password);
+      
+      // Kiểm tra quyền admin
+      try {
+        const adminData = await getAdmin();
+        
+        // Nếu lấy được dữ liệu admin thành công, chuyển hướng đến dashboard
+        message.success('Đăng nhập thành công với quyền admin!');
+        navigate('/dashboard');
+      } catch (adminError) {
+        // Nếu không phải admin, hiển thị thông báo
+        message.error('Tài khoản không có quyền truy cập trang quản trị');
+        // Có thể logout người dùng ở đây hoặc chuyển hướng đến trang khác
+      }
+    } catch (error) {
+      // Xử lý lỗi đăng nhập
+      message.error('Đăng nhập thất bại: ' + (error.message || 'Vui lòng kiểm tra lại thông tin'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Hàm xử lý nhập email để lấy lại mật khẩu
@@ -101,6 +127,7 @@ const Login = () => {
                 type="primary" 
                 htmlType="submit" 
                 block 
+                loading={loading}
                 style={{ 
                   height: '45px', 
                   backgroundColor: '#1890ff',
