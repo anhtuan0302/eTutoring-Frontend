@@ -13,12 +13,14 @@ const Login = () => {
   const [forgotPasswordStep, setForgotPasswordStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
   const [recoveryEmail, setRecoveryEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState('');
   const navigate = useNavigate();
 
   // Hàm xử lý đăng nhập
   const handleLogin = async (values) => {
     try {
       setLoading(true);
+      setLoginError(''); // Reset lỗi
       
       // Gọi API đăng nhập
       const loginData = await login(values.email, values.password);
@@ -29,15 +31,32 @@ const Login = () => {
         
         // Nếu lấy được dữ liệu admin thành công, chuyển hướng đến dashboard
         message.success('Đăng nhập thành công với quyền admin!');
-        navigate('/dashboard');
+        navigate('/admin');
       } catch (adminError) {
         // Nếu không phải admin, hiển thị thông báo
         message.error('Tài khoản không có quyền truy cập trang quản trị');
         // Có thể logout người dùng ở đây hoặc chuyển hướng đến trang khác
       }
     } catch (error) {
-      // Xử lý lỗi đăng nhập
-      message.error('Đăng nhập thất bại: ' + (error.message || 'Vui lòng kiểm tra lại thông tin'));
+      // Xử lý lỗi và cập nhật state loginError
+      if (error.response) {
+        const statusCode = error.response.status;
+        const errorMessage = error.response.data?.message || '';
+        
+        if (statusCode === 404 || errorMessage.includes('not found') || errorMessage.includes('không tồn tại')) {
+          setLoginError('Tài khoản không tồn tại. Vui lòng kiểm tra lại email của bạn.');
+          message.error('Tài khoản không tồn tại. Vui lòng kiểm tra lại email của bạn.');
+        } else if (statusCode === 401 || errorMessage.includes('password') || errorMessage.includes('mật khẩu')) {
+          setLoginError('Sai mật khẩu. Vui lòng thử lại hoặc sử dụng chức năng quên mật khẩu.');
+          message.error('Sai mật khẩu. Vui lòng thử lại hoặc sử dụng chức năng quên mật khẩu.');
+        } else {
+          setLoginError('Đăng nhập thất bại: ' + (errorMessage || 'Vui lòng kiểm tra lại thông tin'));
+          message.error('Đăng nhập thất bại: ' + (errorMessage || 'Vui lòng kiểm tra lại thông tin'));
+        }
+      } else {
+        setLoginError('Lỗi kết nối: Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+        message.error('Lỗi kết nối: Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+      }
     } finally {
       setLoading(false);
     }
@@ -94,6 +113,13 @@ const Login = () => {
             layout="vertical"
             size="large"
           >
+            {/* Hiển thị lỗi nếu có */}
+            {loginError && (
+              <div style={{ color: '#ff4d4f', marginBottom: '16px' }}>
+                {loginError}
+              </div>
+            )}
+
             <Form.Item
               name="email"
               label="Email address"
