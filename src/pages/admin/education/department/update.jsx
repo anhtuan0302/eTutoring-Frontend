@@ -15,10 +15,18 @@ const UpdateDepartment = () => {
     const fetchDepartment = async () => {
       try {
         const data = await getDepartmentByID(id);
+        if (!data) {
+          message.error("Không tìm thấy thông tin department");
+          return;
+        }
         setDepartment(data);
-        form.setFieldsValue(data);
+        form.setFieldsValue({
+          name: data.name,
+          description: data.description
+        });
       } catch (error) {
-        message.error("Lỗi khi lấy thông tin department");
+        console.error("Chi tiết lỗi:", error);
+        message.error("Lỗi khi lấy thông tin department: " + (error.response?.data?.error || error.message));
       }
     };
     
@@ -30,11 +38,18 @@ const UpdateDepartment = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await updateDepartment({ id, ...values });
+      const updateData = {
+        id: id,
+        name: values.name,
+        description: values.description
+      };
+      
+      await updateDepartment(updateData);
       message.success("Cập nhật department thành công!");
       navigate("/admin/department");
     } catch (error) {
-      message.error("Cập nhật thất bại");
+      console.error("Chi tiết lỗi:", error);
+      message.error("Cập nhật thất bại: " + (error.response?.data?.error || error.message));
     } finally {
       setLoading(false);
     }

@@ -9,6 +9,13 @@ import ListTutor from "../pages/admin/tutor/list";
 import ListDepartment from "../pages/admin/education/department/list";
 import CreateDepartment from "../pages/admin/education/department/create";
 import UpdateDepartment from "../pages/admin/education/department/update";
+import DeletedList from "../pages/admin/education/department/deletedList";
+
+//Coursecategory
+import ListCourseCategory from "../pages/admin/education/courseCategory/list";
+import CreateCourseCategory from "../pages/admin/education/courseCategory/create";
+import UpdateCourseCategory from "../pages/admin/education/courseCategory/update";
+
 
 const AdminRoutes = () => {
     return (
@@ -21,6 +28,15 @@ const AdminRoutes = () => {
             <Route path="/department" element={<ListDepartment />} />
             <Route path="/department/create" element={<CreateDepartment />} />
             <Route path="/department/:id" element={<UpdateDepartment />} />
+            <Route path="admin/department/deleted" element={<DeletedList />} />
+            
+            
+
+            {/* Course category */}
+            <Route path="/course_category" element={<ListCourseCategory />} />
+            <Route path="/course_category/create" element={<CreateCourseCategory />} />
+            <Route path="/course_category/:id" element={<UpdateCourseCategory />} />
+            
         </Routes>
     );
 };

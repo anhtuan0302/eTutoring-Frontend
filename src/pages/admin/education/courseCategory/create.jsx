@@ -1,21 +1,21 @@
 import React, { useState } from "react";
 import { Form, Input, Button, message } from "antd";
 import { useNavigate } from "react-router-dom";
-import { createDepartment } from "../../../../api/education/department";
+import { createCourseCategory } from "../../../../api/education/courseCategory";
 import AdminLayout from "../../../../components/layouts/admin/layout";
 
-const CreateDepartment = () => {
+const CreateCourseCategory = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate(); // Thêm useNavigate để điều hướng
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await createDepartment(values);
+      await createCourseCategory(values);
       message.success("Department created successfully!");
       setTimeout(() => {
-        navigate("/admin/department"); // Chuyển hướng về trang danh sách
-      }); // Đợi 1 giây để người dùng thấy thông báo
+        navigate("/admin/course_category"); 
+      }); 
     } catch (error) {
       message.error("Failed to create department");
     } finally {
@@ -24,14 +24,14 @@ const CreateDepartment = () => {
   };
 
   return (
-    <AdminLayout title="Create Department">
+    <AdminLayout title="Create CourseCategory">
       <Form layout="vertical" onFinish={onFinish}>
         <Form.Item
-          label="Department Name"
+          label="Course Category Name"
           name="name"
-          rules={[{ required: true, message: "Please enter department name!" }]}
+          rules={[{ required: true, message: "Please enter coursecategory name!" }]}
         >
-          <Input placeholder="Enter the department name" />
+          <Input placeholder="Enter the coursecategory name" />
         </Form.Item>
 
         <Form.Item label="description" name="description">
@@ -40,7 +40,7 @@ const CreateDepartment = () => {
 
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading}>
-            Create Department
+            Create CourseCategory
           </Button>
         </Form.Item>
       </Form>
@@ -48,4 +48,4 @@ const CreateDepartment = () => {
   );
 };
 
-export default CreateDepartment;
+export default CreateCourseCategory;
