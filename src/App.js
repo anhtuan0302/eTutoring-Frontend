@@ -4,6 +4,7 @@ import { Navigate } from 'react-router-dom';
 
 import IndexRoutes from './routes/index';
 import AdminRoutes from './routes/admin';
+import StudentRoutes from './routes/student';
 
 const App = () => {
 
@@ -12,6 +13,7 @@ const App = () => {
       <Routes>
         <Route path="/*" element={<IndexRoutes />} />
         <Route path="/admin/*" element={<AdminRoutes />} />
+        <Route path="/student/*" element={<StudentRoutes />} />
       </Routes>
     </Router>
   );
