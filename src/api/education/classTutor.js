@@ -5,87 +5,84 @@ const getAccessToken = () => {
     return localStorage.getItem("access_token");
 };
 
-// Lấy thông tin department
-const getDepartment = async () => {
+// Lấy danh sách class tutor
+const getClassTutors = async () => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-        
-        const response = await api.get("/department", {
+
+        const response = await api.get("/class_tutor", {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy thông tin department:", error);
+        console.error("Lỗi khi lấy danh sách class tutor:", error);
         throw error;
     }
 };
 
-const getDepartmentByID = async (id) => {
+// Lấy class tutor theo ID
+const getClassTutorById = async (id) => {
     try {
-        if (!id) throw new Error("ID không hợp lệ"); // Kiểm tra ID trước khi gửi request
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        console.log(`Đang gửi request GET: /department/${id}`); // Debug ID
-        const response = await api.get(`/department/${id}`, {
+        const response = await api.get(`/class_tutor/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy thông tin department theo ID:", error.response?.data || error.message);
+        console.error("Lỗi khi lấy class tutor theo ID:", error);
         throw error;
     }
 };
 
-
-// Tạo department mới
-const createDepartment = async (data) => {
+// Tạo class tutor mới
+const createClassTutor = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-        
-        const response = await api.post("/department", data, {
+
+        const response = await api.post("/class_tutor", data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi tạo department:", error);
+        console.error("Lỗi khi tạo class tutor:", error);
         throw error;
     }
 };
 
-const updateDepartment = async (data) => {
+// Cập nhật class tutor
+const updateClassTutor = async (id, data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-        
-        // Tách riêng id và các dữ liệu cần update
-        const { id, ...updateData } = data;
-        
-        const response = await api.put(`/department/${id}`, updateData, {
+
+        const response = await api.put(`/class_tutor/${id}`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi cập nhật department:", error);
+        console.error("Lỗi khi cập nhật class tutor:", error);
         throw error;
     }
-}
+};
 
-const deletedDepartment = async (data) => {
+// Xóa class tutor
+const deleteClassTutor = async (id) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-        
-        const response = await api.delete(`/department/${data.id}`, {
+
+        const response = await api.delete(`/class_tutor/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Loi khi xóa department:", error);
+        console.error("Lỗi khi xóa class tutor:", error);
         throw error;
     }
-}
+};
 
-export { createDepartment, getDepartment, updateDepartment, deletedDepartment, getDepartmentByID };
+export { getClassTutors, getClassTutorById, createClassTutor, updateClassTutor, deleteClassTutor };

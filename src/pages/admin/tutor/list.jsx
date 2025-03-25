@@ -40,17 +40,27 @@ const ListTutor = () => {
       key: "name",
     },
     {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
+      title: "User ID",
+      dataIndex: "user_id",
+      key: "user_id",
+      render: (user_id) => user_id || "N/A",
     },
     {
-      title: "Trạng thái",
+        title: "Khoa",
+        dataIndex: "department_id",
+        key: "department_id",
+        render: (department) => {
+          console.log("Render department:", department);
+          return department?.name || "N/A";
+        },
+      },           
+    {
+      title: "Status",
       dataIndex: "is_deleted",
       key: "is_deleted",
       render: (is_deleted) => (
         <Tag color={is_deleted ? "red" : "green"}>
-          {is_deleted ? "Đã xóa" : "Hoạt động"}
+          {is_deleted ? "Delete" : "Active"}
         </Tag>
       ),
     },
@@ -78,7 +88,7 @@ const ListTutor = () => {
   ];
 
   return (
-    <AdminLayout title="Danh sách Tutor"> {/* Đổi thành AdminLayout */}
+    <AdminLayout title="Danh sách Tutor">
       <Table columns={columns} dataSource={tutors} rowKey="_id" loading={loading} />
     </AdminLayout>
   );

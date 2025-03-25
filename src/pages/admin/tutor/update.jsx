@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Form, Input, Button, message } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
-import AdminLayout from "../../../../components/layouts/tutor/layout";
+import AdminLayout from "../../../components/layouts/admin/layout";
 import { getTutorByID, updateTutor } from "../../../../api/user/tutor";
 
 const UpdateTutor = () => {

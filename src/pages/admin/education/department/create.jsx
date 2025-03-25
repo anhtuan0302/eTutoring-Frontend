@@ -34,23 +34,23 @@ const CreateDepartment = () => {
   };
 
   return (
-    <AdminLayout title="Tạo Department">
+    <AdminLayout title="Create Department">
       <Form layout="vertical" onFinish={onFinish}>
         <Form.Item
-          label="Tên Department"
+          label="Department Name"
           name="name"
-          rules={[{ required: true, message: "Vui lòng nhập tên department!" }]}
+          rules={[{ required: true, message: "Please enter department name!" }]}
         >
-          <Input placeholder="Nhập tên department" />
+          <Input placeholder="Enter the department name" />
         </Form.Item>
 
-        <Form.Item label="Mô tả" name="description">
-          <Input.TextArea placeholder="Nhập mô tả (không bắt buộc)" />
+        <Form.Item label="description" name="description">
+          <Input.TextArea placeholder="Enter description (optional)" />
         </Form.Item>
 
         <Form.Item>
           <Button type="primary" htmlType="submit" loading={loading}>
-            Tạo mới
+            Create Department
           </Button>
         </Form.Item>
       </Form>

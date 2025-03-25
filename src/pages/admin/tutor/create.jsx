@@ -34,37 +34,7 @@ const CreateTutor = () => {
   };
 
   return (
-    <AdminLayout title="Tạo Tutor"> {/* Đổi thành AdminLayout */}
-      <Form layout="vertical" onFinish={onFinish}>
-        <Form.Item
-          label="Tên Tutor"
-          name="name"
-          rules={[{ required: true, message: "Vui lòng nhập tên tutor!" }]}
-        >
-          <Input placeholder="Nhập tên tutor" />
-        </Form.Item>
-
-        <Form.Item label="Mô tả" name="description">
-          <Input.TextArea placeholder="Nhập mô tả (không bắt buộc)" />
-        </Form.Item>
-
-        <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Tạo mới
-          </Button>
-        </Form.Item>
-      </Form>
-
-      {/* Modal thông báo lỗi */}
-      <Modal
-        title="Lỗi"
-        open={isModalVisible}
-        onOk={() => setIsModalVisible(false)}
-        onCancel={() => setIsModalVisible(false)}
-        okText="Đóng"
-      >
-        <p>{errorMessage}</p>
-      </Modal>
+    <AdminLayout title="Danh sách Tutor" children={content}>
     </AdminLayout>
   );
 };
