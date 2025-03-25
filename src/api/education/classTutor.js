@@ -5,87 +5,84 @@ const getAccessToken = () => {
     return localStorage.getItem("access_token");
 };
 
-// Lấy danh sách tutor
-const getTutors = async () => {
+// Lấy danh sách class tutor
+const getClassTutors = async () => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        const response = await api.get("/tutor", {
+        const response = await api.get("/class_tutor", {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy danh sách tutor:", error);
+        console.error("Lỗi khi lấy danh sách class tutor:", error);
         throw error;
     }
 };
 
-// Lấy thông tin tutor theo ID
-const getTutorByID = async (id) => {
-    try {
-        if (!id) throw new Error("ID không hợp lệ"); // Kiểm tra ID trước khi gửi request
-        const token = getAccessToken();
-        if (!token) throw new Error("Unauthorized: No access token available");
-
-        console.log(`Đang gửi request GET: /tutor/${id}`); // Debug ID
-        const response = await api.get(`/tutor/${id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        return response.data;
-    } catch (error) {
-        console.error("Lỗi khi lấy thông tin tutor theo ID:", error.response?.data || error.message);
-        throw error;
-    }
-};
-
-// Tạo tutor mới
-const createTutor = async (data) => {
+// Lấy class tutor theo ID
+const getClassTutorById = async (id) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        const response = await api.post("/tutor", data, {
+        const response = await api.get(`/class_tutor/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi tạo tutor:", error);
+        console.error("Lỗi khi lấy class tutor theo ID:", error);
         throw error;
     }
 };
 
-// Cập nhật thông tin tutor
-const updateTutor = async (data) => {
+// Tạo class tutor mới
+const createClassTutor = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        const response = await api.put(`/tutor/${data.id}`, data, {
+        const response = await api.post("/class_tutor", data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi cập nhật tutor:", error);
+        console.error("Lỗi khi tạo class tutor:", error);
         throw error;
     }
 };
 
-// Xóa tutor
-const deleteTutor = async (data) => {
+// Cập nhật class tutor
+const updateClassTutor = async (id, data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        const response = await api.delete(`/tutor/${data.id}`, {
+        const response = await api.put(`/class_tutor/${id}`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi xóa tutor:", error);
+        console.error("Lỗi khi cập nhật class tutor:", error);
         throw error;
     }
 };
 
-// Xuất các API để sử dụng trong các file khác
-export { getTutors, getTutorByID, createTutor, updateTutor, deleteTutor };
+// Xóa class tutor
+const deleteClassTutor = async (id) => {
+    try {
+        const token = getAccessToken();
+        if (!token) throw new Error("Unauthorized: No access token available");
+
+        const response = await api.delete(`/class_tutor/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        return response.data;
+    } catch (error) {
+        console.error("Lỗi khi xóa class tutor:", error);
+        throw error;
+    }
+};
+
+export { getClassTutors, getClassTutorById, createClassTutor, updateClassTutor, deleteClassTutor };
