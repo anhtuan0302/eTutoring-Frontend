@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider } from "antd";
 import {
-  DashboardOutlined,
-  UserOutlined,
+  CalendarOutlined,
   BookOutlined,
   ReadOutlined,
   FileTextOutlined,
   MessageOutlined,
-  BarChartOutlined,
   SettingOutlined,
   HomeOutlined,
-  SafetyCertificateOutlined,
   MenuOutlined,
   SearchOutlined,
   BellOutlined,
   DownOutlined,
   LogoutOutlined,
-  UserSwitchOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -39,7 +36,7 @@ const renderUserMenu = () => (
     items={[
       {
         key: '1',
-        icon: <UserOutlined />,
+        // icon: <UserOutlined />,
         label: 'Profile',
       },
       {
@@ -64,64 +61,14 @@ const renderUserMenu = () => (
 const getMenuItems = () => {
   return [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
+      key: "calender",
+      icon: <CalendarOutlined />,
+      label: "Calender",
     },
     {
-      key: "user-management",
-      icon: <UserOutlined />,
-      label: "User Management",
-      children: [
-        {
-          key: "users",
-          label: "All Users",
-        },
-        {
-          key: "pending-users",
-          label: "Pending Accounts",
-        },
-        {
-          key: "students",
-          label: "Students",
-        },
-        {
-          key: "tutors",
-          label: "Tutors",
-        },
-        {
-          key: "staff",
-          label: "Staff",
-        },
-        {
-          key: "departments",
-          label: "Departments",
-        },
-      ],
-    },
-    {
-      key: "permissions",
-      icon: <SafetyCertificateOutlined />, // Sử dụng icon thay thế
-      label: "Access Control",
-      children: [
-        {
-          key: "roles",
-          label: "Roles",
-        },
-        {
-          key: "permissions-list",
-          label: "Permissions",
-        },
-        {
-          key: "role-permissions",
-          label: "Role Permissions",
-        },
-      ],
-    },
-    {
-      key: "courses",
-      icon: <BookOutlined />,
-      label: "Course Management",
+      key: "course",
+      icon: <UsergroupAddOutlined />,
+      label: "Course",
       children: [
         {
           key: "course-categories",
@@ -181,9 +128,9 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "content",
+      key: "homework",
       icon: <FileTextOutlined />,
-      label: "Content Management",
+      label: "Homework",
       children: [
         {
           key: "post-categories",
@@ -219,33 +166,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
       key: "settings",
       icon: <SettingOutlined />,
       label: "System Settings",
@@ -253,7 +173,7 @@ const getMenuItems = () => {
   ];
 };
 
-const AdminLayout = ({ children, title }) => {
+const StudentLayout = ({ children, title }) => {
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -465,7 +385,7 @@ const AdminLayout = ({ children, title }) => {
             {!isMobile && (
               <Dropdown overlay={renderUserMenu()} placement="bottomRight">
                 <Space style={{ cursor: 'pointer', color: THEME_COLORS.textPrimary }}>
-                  <Avatar icon={<UserOutlined />} size="small" />
+                  {/* <Avatar icon={<UserOutlined />} size="small" /> */}
                   <span>Admin User</span>
                   <DownOutlined style={{ fontSize: '12px' }} />
                 </Space>
@@ -521,7 +441,7 @@ const AdminLayout = ({ children, title }) => {
             {/* User info in mobile menu */}
             <div style={{ padding: '16px 24px', borderBottom: `1px solid ${THEME_COLORS.borderColor}`, borderTop: `1px solid ${THEME_COLORS.borderColor}` }}>
               <Space>
-                <Avatar icon={<UserOutlined />} size="default" />
+                {/* <Avatar icon={<UserOutlined />} size="default" /> */}
                 <div>
                   <div style={{ fontWeight: 'bold' }}>Admin User</div>
                   <div style={{ fontSize: '12px', color: THEME_COLORS.textSecondary }}>admin@example.com</div>
@@ -617,4 +537,4 @@ const AdminLayout = ({ children, title }) => {
   );
 };
 
-export default AdminLayout;
+export default StudentLayout;

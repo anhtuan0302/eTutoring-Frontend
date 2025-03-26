@@ -1,91 +1,94 @@
 import { api } from "../config";
 
-// Hàm lấy access_token từ localStorage
 const getAccessToken = () => {
     return localStorage.getItem("access_token");
 };
 
-// Lấy danh sách tutor
-const getTutors = async () => {
+// Lấy tất cả posts
+const getAllPosts = async () => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.get("/tutor", {
+        
+        const response = await api.get("/post", {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy danh sách tutor:", error);
+        console.error("Lỗi khi lấy danh sách posts:", error);
         throw error;
     }
 };
 
-// Lấy thông tin tutor theo ID
-const getTutorByID = async (id) => {
+// Lấy post theo ID
+const getPostById = async (id) => {
     try {
-        if (!id) throw new Error("ID không hợp lệ"); // Kiểm tra ID trước khi gửi request
+        if (!id) throw new Error("ID không hợp lệ");
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        console.log(`Đang gửi request GET: /tutor/${id}`); // Debug ID
-        const response = await api.get(`/tutor/${id}`, {
+        const response = await api.get(`/post/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy thông tin tutor theo ID:", error.response?.data || error.message);
+        console.error("Lỗi khi lấy thông tin post:", error);
         throw error;
     }
 };
 
-// Tạo tutor mới
-const createTutor = async (data) => {
+// Tạo post mới
+const createPost = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.post("/tutor", data, {
+        
+        // Thêm log để kiểm tra dữ liệu
+        console.log('Data being sent:', data);
+        console.log('Token:', token);
+        
+        const response = await api.post("/post", data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi tạo tutor:", error);
+        // Log chi tiết hơn về lỗi
+        console.error("Lỗi khi tạo post:", error);
+        console.error("Error response:", error.response?.data);
         throw error;
     }
 };
 
-// Cập nhật thông tin tutor
-const updateTutor = async (data) => {
+// Cập nhật post
+const updatePost = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.put(`/tutor/${data.id}`, data, {
+        
+        const response = await api.put(`/post/${data._id}`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi cập nhật tutor:", error);
+        console.error("Lỗi khi cập nhật post:", error);
         throw error;
     }
 };
 
-// Xóa tutor
-const deleteTutor = async (data) => {
+// Xóa post
+const deletePost = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.delete(`/tutor/${data.id}`, {
+        
+        const response = await api.delete(`/post/${data._id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi xóa tutor:", error);
+        console.error("Lỗi khi xóa post:", error);
         throw error;
     }
 };
 
-// Xuất các API để sử dụng trong các file khác
-export { getTutors, getTutorByID, createTutor, updateTutor, deleteTutor };
+export { getAllPosts, getPostById, createPost, updatePost, deletePost };

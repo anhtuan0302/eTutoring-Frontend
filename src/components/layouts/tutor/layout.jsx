@@ -5,12 +5,9 @@ import {
   UserOutlined,
   BookOutlined,
   ReadOutlined,
-  FileTextOutlined,
   MessageOutlined,
-  BarChartOutlined,
   SettingOutlined,
   HomeOutlined,
-  SafetyCertificateOutlined,
   MenuOutlined,
   SearchOutlined,
   BellOutlined,
@@ -69,81 +66,14 @@ const getMenuItems = () => {
       label: "Dashboard",
     },
     {
-      key: "user-management",
-      icon: <UserOutlined />,
-      label: "User Management",
-      children: [
-        {
-          key: "users",
-          label: "All Users",
-        },
-        {
-          key: "pending-users",
-          label: "Pending Accounts",
-        },
-        {
-          key: "students",
-          label: "Students",
-        },
-        {
-          key: "tutors",
-          label: "Tutors",
-        },
-        {
-          key: "staff",
-          label: "Staff",
-        },
-        {
-          key: "departments",
-          label: "Departments",
-        },
-      ],
-    },
-    {
-      key: "permissions",
-      icon: <SafetyCertificateOutlined />, // Sử dụng icon thay thế
-      label: "Access Control",
-      children: [
-        {
-          key: "roles",
-          label: "Roles",
-        },
-        {
-          key: "permissions-list",
-          label: "Permissions",
-        },
-        {
-          key: "role-permissions",
-          label: "Role Permissions",
-        },
-      ],
+      key: "calendar",
+      icon: <CalendarOutlined />,
+      label: "Calendar",
     },
     {
       key: "courses",
       icon: <BookOutlined />,
       label: "Course Management",
-      children: [
-        {
-          key: "course-categories",
-          label: "Course Categories",
-        },
-        {
-          key: "course-list",
-          label: "Courses",
-        },
-        {
-          key: "classes",
-          label: "Classes",
-        },
-        {
-          key: "class-tutors",
-          label: "Tutor Assignments",
-        },
-        {
-          key: "enrollments",
-          label: "Enrollments",
-        },
-      ],
     },
     {
       key: "learning",
@@ -181,25 +111,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "content",
-      icon: <FileTextOutlined />,
-      label: "Content Management",
-      children: [
-        {
-          key: "post-categories",
-          label: "Post Categories",
-        },
-        {
-          key: "posts",
-          label: "Posts",
-        },
-        {
-          key: "post-comments",
-          label: "Comments",
-        },
-      ],
-    },
-    {
       key: "communication",
       icon: <MessageOutlined />,
       label: "Communication",
@@ -219,33 +130,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
       key: "settings",
       icon: <SettingOutlined />,
       label: "System Settings",
@@ -253,7 +137,7 @@ const getMenuItems = () => {
   ];
 };
 
-const AdminLayout = ({ children, title }) => {
+const TutorLayout = ({ children, title }) => {
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -617,4 +501,4 @@ const AdminLayout = ({ children, title }) => {
   );
 };
 
-export default AdminLayout;
+export default TutorLayout;

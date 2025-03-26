@@ -1,91 +1,92 @@
 import { api } from "../config";
 
-// Hàm lấy access_token từ localStorage
 const getAccessToken = () => {
     return localStorage.getItem("access_token");
 };
 
-// Lấy danh sách tutor
-const getTutors = async () => {
+// Lấy tất cả comment reactions
+const getAllCommentReactions = async () => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.get("/tutor", {
+        
+        const response = await api.get("/post_comment_reaction", {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy danh sách tutor:", error);
+        console.error("Lỗi khi lấy danh sách comment reactions:", error);
         throw error;
     }
 };
 
-// Lấy thông tin tutor theo ID
-const getTutorByID = async (id) => {
+// Tạo comment reaction mới
+const createCommentReaction = async (data) => {
     try {
-        if (!id) throw new Error("ID không hợp lệ"); // Kiểm tra ID trước khi gửi request
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        console.log(`Đang gửi request GET: /tutor/${id}`); // Debug ID
-        const response = await api.get(`/tutor/${id}`, {
+        
+        const response = await api.post("/post_comment_reaction", data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy thông tin tutor theo ID:", error.response?.data || error.message);
+        console.error("Lỗi khi tạo comment reaction:", error);
         throw error;
     }
 };
 
-// Tạo tutor mới
-const createTutor = async (data) => {
+// Cập nhật comment reaction
+const updateCommentReaction = async (id, data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.post("/tutor", data, {
+        
+        const response = await api.put(`/post_comment_reaction/${id}`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi tạo tutor:", error);
+        console.error("Lỗi khi cập nhật comment reaction:", error);
         throw error;
     }
 };
 
-// Cập nhật thông tin tutor
-const updateTutor = async (data) => {
+// Xóa comment reaction
+const deleteCommentReaction = async (id) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.put(`/tutor/${data.id}`, data, {
+        
+        const response = await api.delete(`/post_comment_reaction/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi cập nhật tutor:", error);
+        console.error("Lỗi khi xóa comment reaction:", error);
         throw error;
     }
 };
 
-// Xóa tutor
-const deleteTutor = async (data) => {
+const getCommentReactionById = async (id) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.delete(`/tutor/${data.id}`, {
+        
+        const response = await api.get(`/post_comment_reaction/${id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi xóa tutor:", error);
+        console.error("Lỗi khi lấy thông tin reaction:", error);
         throw error;
     }
 };
 
-// Xuất các API để sử dụng trong các file khác
-export { getTutors, getTutorByID, createTutor, updateTutor, deleteTutor };
+export { 
+    getAllCommentReactions as getAllPostCommentReaction,
+    createCommentReaction as createPostCommentReaction,
+    updateCommentReaction as updatePostCommentReaction,
+    deleteCommentReaction as deletePostCommentReaction,
+    getCommentReactionById as getPostCommentReactionById
+};

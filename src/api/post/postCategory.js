@@ -1,91 +1,88 @@
 import { api } from "../config";
 
-// Hàm lấy access_token từ localStorage
 const getAccessToken = () => {
     return localStorage.getItem("access_token");
 };
 
-// Lấy danh sách tutor
-const getTutors = async () => {
+// Lấy thông tin department
+const getPostCategory = async () => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.get("/tutor", {
+        
+        const response = await api.get("/post_category", {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy danh sách tutor:", error);
+        console.error("Lỗi khi lấy thông tin postcategory:", error);
         throw error;
     }
 };
 
-// Lấy thông tin tutor theo ID
-const getTutorByID = async (id) => {
+const getPostCategoryByID = async (id) => {
     try {
-        if (!id) throw new Error("ID không hợp lệ"); // Kiểm tra ID trước khi gửi request
+        if (!id) throw new Error("ID không hợp lệ");
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
 
-        console.log(`Đang gửi request GET: /tutor/${id}`); // Debug ID
-        const response = await api.get(`/tutor/${id}`, {
+        console.log(`Đang gửi request GET: /post_category/${id}`);
+        const response = await api.get(`/post_category/${id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+        console.log('Response data:', response.data);
+        return response.data;
+    } catch (error) {
+        console.error("Lỗi khi lấy thông tin course category theo ID:", error.response?.data || error.message);
+        throw error;
+    }
+};
+
+const createPostCategory = async (data) => {
+    try {
+        const token = getAccessToken();
+        if (!token) throw new Error("Unauthorized: No access token available");
+        
+        const response = await api.post("/post_category", data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi lấy thông tin tutor theo ID:", error.response?.data || error.message);
+        console.error("Lỗi khi tạo postcategory:", error);
         throw error;
     }
 };
 
-// Tạo tutor mới
-const createTutor = async (data) => {
+const updatePostCategory = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.post("/tutor", data, {
+        
+        console.log('Sending update request with data:', data);
+        
+        const response = await api.put(`/post_category/${data._id}`, data, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi tạo tutor:", error);
+        console.error("Lỗi khi cập nhật course category:", error.response || error);
         throw error;
     }
-};
+}
 
-// Cập nhật thông tin tutor
-const updateTutor = async (data) => {
+const deletedPostCategory = async (data) => {
     try {
         const token = getAccessToken();
         if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.put(`/tutor/${data.id}`, data, {
+        
+        const response = await api.delete(`/post_category/${data._id}`, {
             headers: { Authorization: `Bearer ${token}` },
         });
         return response.data;
     } catch (error) {
-        console.error("Lỗi khi cập nhật tutor:", error);
+        console.error("Lỗi khi xóa post_category:", error);
         throw error;
     }
-};
+}
 
-// Xóa tutor
-const deleteTutor = async (data) => {
-    try {
-        const token = getAccessToken();
-        if (!token) throw new Error("Unauthorized: No access token available");
-
-        const response = await api.delete(`/tutor/${data.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-        });
-        return response.data;
-    } catch (error) {
-        console.error("Lỗi khi xóa tutor:", error);
-        throw error;
-    }
-};
-
-// Xuất các API để sử dụng trong các file khác
-export { getTutors, getTutorByID, createTutor, updateTutor, deleteTutor };
+export{ getPostCategory, getPostCategoryByID, createPostCategory, updatePostCategory, deletedPostCategory}

@@ -1,51 +1,43 @@
 import React, { useEffect, useState } from "react";
-import { Table, Tag } from "antd";
-import AdminLayout from "../../../components/layouts/admin/layout";
-import { getTutor } from "../../../api/user/tutor";
-import { getDepartment } from "../../../api/education/department";
+import { Table, Tag, Button, Popconfirm, message } from "antd";
+import { useNavigate } from "react-router-dom";
+import AdminLayout from "../../../components/layouts/admin/layout"; // Sửa lại đường dẫn AdminLayout
+import { getTutors, deleteTutor } from "../../../api/user/tutor"; // Đường dẫn API đã đúng
 
 const ListTutor = () => {
   const [tutors, setTutors] = useState([]);
-  const [departments, setDepartments] = useState({}); // Dùng {} thay vì []
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchTutors = async () => {
       try {
-        setLoading(true);
-
-        // Gọi cả hai API song song
-        const [tutorData, departmentData] = await Promise.all([
-          getTutor(),
-          getDepartment(),
-        ]);
-
-        console.log("Tutors:", tutorData);
-        console.log("Departments:", departmentData);
-
-        // Chuyển danh sách khoa thành object { _id: name }
-        const departmentMap = {};
-        departmentData.forEach(dept => {
-          departmentMap[dept._id] = dept.name;
-        });
-
-        setTutors(tutorData);
-        setDepartments(departmentMap);
+        const data = await getTutors();
+        setTutors(data);
       } catch (error) {
-        console.error("Lỗi khi lấy dữ liệu:", error);
+        console.error("Lỗi khi lấy danh sách tutor:", error);
       } finally {
         setLoading(false);
       }
     };
-
-    fetchData();
+    fetchTutors();
   }, []);
+
+  const handleDelete = async (id) => {
+    try {
+      await deleteTutor({ id });
+      message.success("Xóa tutor thành công!");
+      setTutors(tutors.filter((tutor) => tutor._id !== id));
+    } catch (error) {
+      message.error("Lỗi khi xóa tutor");
+    }
+  };
 
   const columns = [
     {
-      title: "Mã Tutor",
-      dataIndex: "tutor_code",
-      key: "tutor_code",
+      title: "Tên Tutor",
+      dataIndex: "name",
+      key: "name",
     },
     {
       title: "User ID",
@@ -54,7 +46,7 @@ const ListTutor = () => {
       render: (user_id) => user_id || "N/A",
     },
     {
-        title: "Department",
+        title: "Khoa",
         dataIndex: "department_id",
         key: "department_id",
         render: (department) => {
@@ -72,10 +64,31 @@ const ListTutor = () => {
         </Tag>
       ),
     },
+    {
+      title: "Hành động",
+      key: "action",
+      render: (_, record) => (
+        <>
+          <Button type="link" onClick={() => navigate(`/admin/tutor/${record._id}`)}>
+            Chỉnh sửa
+          </Button>
+          <Popconfirm
+            title="Bạn có chắc muốn xóa không?"
+            onConfirm={() => handleDelete(record._id)}
+            okText="Có"
+            cancelText="Không"
+          >
+            <Button type="link" danger>
+              Xóa
+            </Button>
+          </Popconfirm>
+        </>
+      ),
+    },
   ];
 
   return (
-    <AdminLayout title="List Tutor">
+    <AdminLayout title="Danh sách Tutor">
       <Table columns={columns} dataSource={tutors} rowKey="_id" loading={loading} />
     </AdminLayout>
   );
