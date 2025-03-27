@@ -1,17 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider, message } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider } from "antd";
 import {
   DashboardOutlined,
   UserOutlined,
   BookOutlined,
   ReadOutlined,
-  FileTextOutlined,
   MessageOutlined,
-  BarChartOutlined,
   SettingOutlined,
   HomeOutlined,
-  SafetyCertificateOutlined,
   MenuOutlined,
   SearchOutlined,
   BellOutlined,
@@ -19,8 +15,6 @@ import {
   LogoutOutlined,
   UserSwitchOutlined,
 } from "@ant-design/icons";
-
-import { useAuth } from "../../../AuthContext";
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -36,6 +30,33 @@ const THEME_COLORS = {
   borderColor: '#E5E9F2'
 };
 
+// Header components
+const renderUserMenu = () => (
+  <Menu
+    items={[
+      {
+        key: '1',
+        icon: <UserOutlined />,
+        label: 'Profile',
+      },
+      {
+        key: '2',
+        icon: <SettingOutlined />,
+        label: 'Settings',
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: '3',
+        icon: <LogoutOutlined />,
+        label: 'Logout',
+        danger: true,
+      },
+    ]}
+  />
+);
+
 // Define menu items with proper structure
 const getMenuItems = () => {
   return [
@@ -45,81 +66,14 @@ const getMenuItems = () => {
       label: "Dashboard",
     },
     {
-      key: "user-management",
-      icon: <UserOutlined />,
-      label: "User Management",
-      children: [
-        {
-          key: "users",
-          label: "All Users",
-        },
-        {
-          key: "pending-users",
-          label: "Pending Accounts",
-        },
-        {
-          key: "students",
-          label: "Students",
-        },
-        {
-          key: "tutors",
-          label: "Tutors",
-        },
-        {
-          key: "staff",
-          label: "Staff",
-        },
-        {
-          key: "departments",
-          label: "Departments",
-        },
-      ],
-    },
-    {
-      key: "permissions",
-      icon: <SafetyCertificateOutlined />, // Sử dụng icon thay thế
-      label: "Access Control",
-      children: [
-        {
-          key: "roles",
-          label: "Roles",
-        },
-        {
-          key: "permissions-list",
-          label: "Permissions",
-        },
-        {
-          key: "role-permissions",
-          label: "Role Permissions",
-        },
-      ],
+      key: "calendar",
+      icon: <CalendarOutlined />,
+      label: "Calendar",
     },
     {
       key: "courses",
       icon: <BookOutlined />,
       label: "Course Management",
-      children: [
-        {
-          key: "course-categories",
-          label: "Course Categories",
-        },
-        {
-          key: "course-list",
-          label: "Courses",
-        },
-        {
-          key: "classes",
-          label: "Classes",
-        },
-        {
-          key: "class-tutors",
-          label: "Tutor Assignments",
-        },
-        {
-          key: "enrollments",
-          label: "Enrollments",
-        },
-      ],
     },
     {
       key: "learning",
@@ -157,25 +111,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "content",
-      icon: <FileTextOutlined />,
-      label: "Content Management",
-      children: [
-        {
-          key: "post-categories",
-          label: "Post Categories",
-        },
-        {
-          key: "posts",
-          label: "Posts",
-        },
-        {
-          key: "post-comments",
-          label: "Comments",
-        },
-      ],
-    },
-    {
       key: "communication",
       icon: <MessageOutlined />,
       label: "Communication",
@@ -195,33 +130,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
       key: "settings",
       icon: <SettingOutlined />,
       label: "System Settings",
@@ -229,7 +137,7 @@ const getMenuItems = () => {
   ];
 };
 
-const AppLayout = ({ children, title }) => {
+const TutorLayout = ({ children, title }) => {
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -240,47 +148,6 @@ const AppLayout = ({ children, title }) => {
   const [searchValue, setSearchValue] = useState('');
   const [searchOptions, setSearchOptions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      message.success('Đăng xuất thành công');
-      navigate('/', { replace: true });
-    } catch (error) {
-      message.error('Có lỗi xảy ra khi đăng xuất');
-    }
-  };
-
-  // Header components
-const renderUserMenu = () => (
-  <Menu
-    items={[
-      {
-        key: '1',
-        icon: <UserOutlined />,
-        label: 'Profile',
-      },
-      {
-        key: '2',
-        icon: <SettingOutlined />,
-        label: 'Settings',
-      },
-      {
-        type: 'divider',
-      },
-      {
-        key: '3',
-        icon: <LogoutOutlined />,
-        label: 'Logout',
-        danger: true,
-        onClick: handleLogout
-      },
-    ]}
-  />
-);
 
   // Sider width - increased for better visibility
   const SIDER_WIDTH = 260;
@@ -567,7 +434,6 @@ const renderUserMenu = () => (
                 type="primary"
                 danger
                 icon={<LogoutOutlined />}
-                onClick={handleLogout}
                 style={{ width: '100%' }}
               >
                 Sign Out
@@ -635,4 +501,4 @@ const renderUserMenu = () => (
   );
 };
 
-export default AppLayout;
+export default TutorLayout;

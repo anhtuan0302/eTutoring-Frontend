@@ -1,26 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider, message } from "antd";
-import { useNavigate } from "react-router-dom";
+import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider } from "antd";
 import {
-  DashboardOutlined,
-  UserOutlined,
+  CalendarOutlined,
   BookOutlined,
   ReadOutlined,
   FileTextOutlined,
   MessageOutlined,
-  BarChartOutlined,
   SettingOutlined,
   HomeOutlined,
-  SafetyCertificateOutlined,
   MenuOutlined,
   SearchOutlined,
   BellOutlined,
   DownOutlined,
   LogoutOutlined,
-  UserSwitchOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
-
-import { useAuth } from "../../../AuthContext";
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -36,68 +30,45 @@ const THEME_COLORS = {
   borderColor: '#E5E9F2'
 };
 
+// Header components
+const renderUserMenu = () => (
+  <Menu
+    items={[
+      {
+        key: '1',
+        // icon: <UserOutlined />,
+        label: 'Profile',
+      },
+      {
+        key: '2',
+        icon: <SettingOutlined />,
+        label: 'Settings',
+      },
+      {
+        type: 'divider',
+      },
+      {
+        key: '3',
+        icon: <LogoutOutlined />,
+        label: 'Logout',
+        danger: true,
+      },
+    ]}
+  />
+);
+
 // Define menu items with proper structure
 const getMenuItems = () => {
   return [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
+      key: "calender",
+      icon: <CalendarOutlined />,
+      label: "Calender",
     },
     {
-      key: "user-management",
-      icon: <UserOutlined />,
-      label: "User Management",
-      children: [
-        {
-          key: "users",
-          label: "All Users",
-        },
-        {
-          key: "pending-users",
-          label: "Pending Accounts",
-        },
-        {
-          key: "students",
-          label: "Students",
-        },
-        {
-          key: "tutors",
-          label: "Tutors",
-        },
-        {
-          key: "staff",
-          label: "Staff",
-        },
-        {
-          key: "departments",
-          label: "Departments",
-        },
-      ],
-    },
-    {
-      key: "permissions",
-      icon: <SafetyCertificateOutlined />, // Sử dụng icon thay thế
-      label: "Access Control",
-      children: [
-        {
-          key: "roles",
-          label: "Roles",
-        },
-        {
-          key: "permissions-list",
-          label: "Permissions",
-        },
-        {
-          key: "role-permissions",
-          label: "Role Permissions",
-        },
-      ],
-    },
-    {
-      key: "courses",
-      icon: <BookOutlined />,
-      label: "Course Management",
+      key: "course",
+      icon: <UsergroupAddOutlined />,
+      label: "Course",
       children: [
         {
           key: "course-categories",
@@ -157,9 +128,9 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "content",
+      key: "homework",
       icon: <FileTextOutlined />,
-      label: "Content Management",
+      label: "Homework",
       children: [
         {
           key: "post-categories",
@@ -195,33 +166,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
       key: "settings",
       icon: <SettingOutlined />,
       label: "System Settings",
@@ -229,7 +173,7 @@ const getMenuItems = () => {
   ];
 };
 
-const AppLayout = ({ children, title }) => {
+const StudentLayout = ({ children, title }) => {
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -240,47 +184,6 @@ const AppLayout = ({ children, title }) => {
   const [searchValue, setSearchValue] = useState('');
   const [searchOptions, setSearchOptions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
-
-  const { logout } = useAuth();
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      message.success('Đăng xuất thành công');
-      navigate('/', { replace: true });
-    } catch (error) {
-      message.error('Có lỗi xảy ra khi đăng xuất');
-    }
-  };
-
-  // Header components
-const renderUserMenu = () => (
-  <Menu
-    items={[
-      {
-        key: '1',
-        icon: <UserOutlined />,
-        label: 'Profile',
-      },
-      {
-        key: '2',
-        icon: <SettingOutlined />,
-        label: 'Settings',
-      },
-      {
-        type: 'divider',
-      },
-      {
-        key: '3',
-        icon: <LogoutOutlined />,
-        label: 'Logout',
-        danger: true,
-        onClick: handleLogout
-      },
-    ]}
-  />
-);
 
   // Sider width - increased for better visibility
   const SIDER_WIDTH = 260;
@@ -482,7 +385,7 @@ const renderUserMenu = () => (
             {!isMobile && (
               <Dropdown overlay={renderUserMenu()} placement="bottomRight">
                 <Space style={{ cursor: 'pointer', color: THEME_COLORS.textPrimary }}>
-                  <Avatar icon={<UserOutlined />} size="small" />
+                  {/* <Avatar icon={<UserOutlined />} size="small" /> */}
                   <span>Admin User</span>
                   <DownOutlined style={{ fontSize: '12px' }} />
                 </Space>
@@ -538,7 +441,7 @@ const renderUserMenu = () => (
             {/* User info in mobile menu */}
             <div style={{ padding: '16px 24px', borderBottom: `1px solid ${THEME_COLORS.borderColor}`, borderTop: `1px solid ${THEME_COLORS.borderColor}` }}>
               <Space>
-                <Avatar icon={<UserOutlined />} size="default" />
+                {/* <Avatar icon={<UserOutlined />} size="default" /> */}
                 <div>
                   <div style={{ fontWeight: 'bold' }}>Admin User</div>
                   <div style={{ fontSize: '12px', color: THEME_COLORS.textSecondary }}>admin@example.com</div>
@@ -567,7 +470,6 @@ const renderUserMenu = () => (
                 type="primary"
                 danger
                 icon={<LogoutOutlined />}
-                onClick={handleLogout}
                 style={{ width: '100%' }}
               >
                 Sign Out
@@ -635,4 +537,4 @@ const renderUserMenu = () => (
   );
 };
 
-export default AppLayout;
+export default StudentLayout;
