@@ -1,14 +1,14 @@
-import React, { useEffect, useState } from "react";
-import { Table, Tag, Button, Popconfirm, message, Input, Empty, Space, Upload, Modal } from "antd";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { Table, Tag, Button, Popconfirm, message, Input, Empty, Space, Upload, Modal, Tooltip } from "antd";
 import { useNavigate } from "react-router-dom";
 import AdminLayout from "../../../../components/layouts/admin/layout";
 import { getDepartment, updateDepartment, createDepartment } from "../../../../api/education/department";
-import { SearchOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined } from "@ant-design/icons";
+import { SearchOutlined, DeleteOutlined, DownloadOutlined, UploadOutlined, FilterOutlined } from "@ant-design/icons";
 import * as XLSX from 'xlsx';
 
 const ListDepartment = () => {
   const [departments, setDepartments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
@@ -19,31 +19,32 @@ const ListDepartment = () => {
   const [importLoading, setImportLoading] = useState(false);
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importResults, setImportResults] = useState(null);
+  const [nameFilter, setNameFilter] = useState(null);
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchDepartments();
-  }, []);
-
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async () => {
     try {
       setLoading(true);
       const data = await getDepartment();
       const activeDepartments = data.filter(dep => !dep.is_deleted);
       setDepartments(activeDepartments);
-      setPagination({
-        ...pagination,
+      setPagination(prev => ({
+        ...prev,
         total: activeDepartments.length,
-      });
+      }));
     } catch (error) {
       console.error("Error fetching departments:", error);
       message.error("Failed to load department list");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleDelete = async (id) => {
+  useEffect(() => {
+    fetchDepartments();
+  }, [fetchDepartments]);
+
+  const handleDelete = useCallback(async (id) => {
     try {
       const departmentToUpdate = departments.find(dep => dep._id === id);
       if (!departmentToUpdate) {
@@ -61,19 +62,19 @@ const ListDepartment = () => {
       const updatedDepartments = departments.filter(dep => dep._id !== id);
       setDepartments(updatedDepartments);
       setSelectedRowKeys(prev => prev.filter(key => key !== id));
-      setPagination({
-        ...pagination,
+      setPagination(prev => ({
+        ...prev,
         total: updatedDepartments.length,
-      });
+      }));
   
       message.success("Department deleted successfully");
     } catch (error) {
       message.error(error.response?.data?.error || "Error deleting department");
       console.error("Error details:", error);
     }
-  };
+  }, [departments]);
 
-  const handleDeleteMultiple = async () => {
+  const handleDeleteMultiple = useCallback(async () => {
     try {
       if (selectedRowKeys.length === 0) {
         message.warning("Please select at least one department to delete");
@@ -95,31 +96,54 @@ const ListDepartment = () => {
       const updatedDepartments = departments.filter(dep => !selectedRowKeys.includes(dep._id));
       setDepartments(updatedDepartments);
       setSelectedRowKeys([]);
-      setPagination({
-        ...pagination,
+      setPagination(prev => ({
+        ...prev,
         total: updatedDepartments.length,
-      });
+      }));
       
       message.success(`Deleted ${selectedRowKeys.length} departments successfully`);
     } catch (error) {
       message.error(error.response?.data?.error || "Error deleting departments");
       console.error("Error details:", error);
     }
-  };
+  }, [departments, selectedRowKeys]);
 
-  const filteredDepartments = departments.filter(department => {
-    const name = department.name ? department.name.toLowerCase() : '';
-    const description = department.description ? department.description.toLowerCase() : '';
+  const highlightText = useCallback((text, search) => {
+    if (!search || !text) return text || '-';
+    const regex = new RegExp(`(${search})`, 'gi');
+    return text.toString().split(regex).map((part, i) => 
+      regex.test(part) ? <mark key={i}>{part}</mark> : part
+    );
+  }, []);
+
+  const filteredDepartments = useMemo(() => {
+    let result = [...departments];
     const search = searchText.toLowerCase();
     
-    return name.includes(search) || description.includes(search);
-  });
+    // Apply name filter if exists
+    if (nameFilter) {
+      result = result.filter(department => 
+        department.name?.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+    }
+    
+    // Apply search text filter
+    if (search) {
+      result = result.filter(department => {
+        const name = department.name ? department.name.toLowerCase() : '';
+        const description = department.description ? department.description.toLowerCase() : '';
+        return name.includes(search) || description.includes(search);
+      });
+    }
+    
+    return result;
+  }, [departments, searchText, nameFilter]);
 
-  const handleTableChange = (pagination) => {
-    setPagination(pagination);
-  };
+  const handleTableChange = useCallback((newPagination) => {
+    setPagination(newPagination);
+  }, []);
 
-  const exportToExcel = () => {
+  const exportToExcel = useCallback(() => {
     const dataToExport = filteredDepartments.map(department => ({
       'Name': department.name || '-',
       'Description': department.description || '-',
@@ -134,9 +158,9 @@ const ListDepartment = () => {
     const dateStr = `${today.getDate()}-${today.getMonth()+1}-${today.getFullYear()}`;
     
     XLSX.writeFile(workbook, `Departments_${dateStr}.xlsx`);
-  };
+  }, [filteredDepartments]);
 
-  const beforeUpload = (file) => {
+  const beforeUpload = useCallback((file) => {
     const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
                    file.type === 'application/vnd.ms-excel';
     if (!isExcel) {
@@ -144,9 +168,90 @@ const ListDepartment = () => {
       return false;
     }
     return true;
-  };
+  }, []);
 
-  const handleImport = async (info) => {
+  const readExcelFile = useCallback((file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
+          resolve(jsonData);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      
+      reader.onerror = (error) => reject(error);
+      reader.readAsArrayBuffer(file);
+    });
+  }, []);
+
+  const validateImportData = useCallback((data) => {
+    const errors = [];
+    const nameSet = new Set(departments.map(d => d.name.toLowerCase()));
+    
+    data.forEach((row, index) => {
+      const rowNumber = index + 2;
+      
+      if (!row['Name'] && !row['Department Name']) {
+        errors.push(`Row ${rowNumber}: Missing department name`);
+      }
+    });
+    
+    return {
+      hasErrors: errors.length > 0,
+      errors
+    };
+  }, [departments]);
+
+  const showImportErrors = useCallback((errors) => {
+    message.error({
+      content: (
+        <div>
+          <h4>Import errors:</h4>
+          <ul style={{ maxHeight: '200px', overflowY: 'auto' }}>
+            {errors.map((error, i) => <li key={i}>{error}</li>)}
+          </ul>
+        </div>
+      ),
+      duration: 10,
+    });
+  }, []);
+
+  const processImportData = useCallback(async (data) => {
+    const results = {
+      successCount: 0,
+      errorCount: 0,
+      errors: []
+    };
+
+    for (const [index, row] of data.entries()) {
+      try {
+        await createDepartment({
+          name: row['Name'] || row['Department Name'],
+          description: row['Description'] || '',
+          is_deleted: false
+        });
+        results.successCount++;
+      } catch (error) {
+        results.errorCount++;
+        results.errors.push({
+          row: index + 2,
+          name: row['Name'] || row['Department Name'],
+          error: error.response?.data?.error || error.message
+        });
+      }
+    }
+    
+    return results;
+  }, []);
+
+  const handleImport = useCallback(async (info) => {
     const { file } = info;
     setImportLoading(true);
     
@@ -170,90 +275,9 @@ const ListDepartment = () => {
     } finally {
       setImportLoading(false);
     }
-  };
+  }, [fetchDepartments, processImportData, readExcelFile, showImportErrors, validateImportData]);
 
-  const readExcelFile = (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const workbook = XLSX.read(data, { type: 'array' });
-          const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(firstSheet);
-          resolve(jsonData);
-        } catch (error) {
-          reject(error);
-        }
-      };
-      
-      reader.onerror = (error) => reject(error);
-      reader.readAsArrayBuffer(file);
-    });
-  };
-
-  const validateImportData = (data) => {
-    const errors = [];
-    const nameSet = new Set(departments.map(d => d.name.toLowerCase()));
-    
-    data.forEach((row, index) => {
-      const rowNumber = index + 2;
-      
-      if (!row['Name'] && !row['Department Name']) {
-        errors.push(`Row ${rowNumber}: Missing department name`);
-      }
-    });
-    
-    return {
-      hasErrors: errors.length > 0,
-      errors
-    };
-  };
-
-  const showImportErrors = (errors) => {
-    message.error({
-      content: (
-        <div>
-          <h4>Import errors:</h4>
-          <ul style={{ maxHeight: '200px', overflowY: 'auto' }}>
-            {errors.map((error, i) => <li key={i}>{error}</li>)}
-          </ul>
-        </div>
-      ),
-      duration: 10,
-    });
-  };
-
-  const processImportData = async (data) => {
-    const results = {
-      successCount: 0,
-      errorCount: 0,
-      errors: []
-    };
-
-    for (const [index, row] of data.entries()) {
-      try {
-        await createDepartment({
-          name: row['Name'] || row['Department Name'], // Accept both column names
-          description: row['Description'] || '',
-          is_deleted: false // Automatically set to Active
-        });
-        results.successCount++;
-      } catch (error) {
-        results.errorCount++;
-        results.errors.push({
-          row: index + 2,
-          name: row['Name'] || row['Department Name'],
-          error: error.response?.data?.error || error.message
-        });
-      }
-    }
-    
-    return results;
-  };
-
-  const showImportResults = () => {
+  const showImportResults = useCallback(() => {
     return (
       <Modal
         title="Import Results"
@@ -285,31 +309,83 @@ const ListDepartment = () => {
         </div>
       </Modal>
     );
+  }, [importModalVisible, importResults]);
+
+  const nameColumn = {
+    title: "Name",
+    dataIndex: "name",
+    key: "name",
+    sorter: (a, b) => a.name.localeCompare(b.name),
+    sortDirections: ['ascend', 'descend'],
+    defaultSortOrder: 'ascend',
+    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
+      <div style={{ padding: 8 }}>
+        <Input
+          placeholder="Filter by name"
+          value={selectedKeys[0]}
+          onChange={e => setSelectedKeys(e.target.value ? [e.target.value] : [])}
+          onPressEnter={() => {
+            confirm();
+            setNameFilter(selectedKeys[0] || null);
+          }}
+          style={{ width: 188, marginBottom: 8, display: 'block' }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => {
+              confirm();
+              setNameFilter(selectedKeys[0] || null);
+            }}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Filter
+          </Button>
+          <Button 
+            onClick={() => {
+              clearFilters();
+              setNameFilter(null);
+              confirm();
+            }} 
+            size="small" 
+            style={{ width: 90 }}
+          >
+            Reset
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: filtered => (
+      <Tooltip title="Filter by name">
+        <FilterOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
+      </Tooltip>
+    ),
+    onFilter: (value, record) => 
+      record.name ? record.name.toLowerCase().includes(value.toLowerCase()) : false,
+    render: (text) => highlightText(text, searchText),
+  };
+
+  const statusColumn = {
+    title: "Status",
+    dataIndex: "is_deleted",
+    key: "is_deleted",
+    render: (is_deleted) => (
+      <Tag color={is_deleted ? "red" : "green"}>
+        {is_deleted ? "Inactive" : "Active"}
+      </Tag>
+    ),
   };
 
   const columns = [
-    {
-      title: "Name",
-      dataIndex: "name",
-      key: "name",
-      render: (text) => text || '-',
-    },
+    nameColumn,
     {
       title: "Description",
       dataIndex: "description",
       key: "description",
-      render: (text) => text || '-',
+      render: (text) => highlightText(text, searchText),
     },
-    {
-      title: "Status",
-      dataIndex: "is_deleted",
-      key: "is_deleted",
-      render: (is_deleted) => (
-        <Tag color={is_deleted ? "red" : "green"}>
-          {is_deleted ? "Inactive" : "Active"}
-        </Tag>
-      ),
-    },
+    statusColumn,
     {
       title: "Actions",
       key: "actions",
@@ -332,6 +408,21 @@ const ListDepartment = () => {
       ),
     },
   ];
+
+  const renderEmpty = useCallback(() => {
+    return (
+      <Empty
+        description={
+          <span>
+            {searchText ? 
+              "No departments match your search" : 
+              "No departments found"
+            }
+          </span>
+        }
+      />
+    );
+  }, [searchText]);
 
   return (
     <AdminLayout title="Department Management">
@@ -413,18 +504,7 @@ const ListDepartment = () => {
         }}
         onChange={handleTableChange}
         locale={{
-          emptyText: (
-            <Empty
-              description={
-                <span>
-                  {searchText ? 
-                    "No departments match your search" : 
-                    "No departments found"
-                  }
-                </span>
-              }
-            />
-          )
+          emptyText: renderEmpty()
         }}
       />
 
