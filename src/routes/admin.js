@@ -14,38 +14,40 @@ import ListCourseCategory from "../pages/admin/education/courseCategory/list";
 import CreateCourseCategory from "../pages/admin/education/courseCategory/create";
 import UpdateCourseCategory from "../pages/admin/education/courseCategory/update";
 
-// Post
-import ListPost from "../pages/admin/post/post/list";
-import CreatePost from "../pages/admin/post/post/create";
-import UpdatePost from "../pages/admin/post/post/update";
 
-//Post Category
-import ListPostCategory from "../pages/admin/post/postCategory/list";
-import UpdatePostCategory from "../pages/admin/post/postCategory/update";
-import CreatePostCategory from "../pages/admin/post/postCategory/create";
+// // Post
+// import ListPost from "../pages/admin/post/post/list";
+// import CreatePost from "../pages/admin/post/post/create";
+// import UpdatePost from "../pages/admin/post/post/update";
 
-//Post Comment
-import ListPostComment from "../pages/admin/post/postComment/list";
+// //Post Category
+// import ListPostCategory from "../pages/admin/post/postCategory/list";
+// import UpdatePostCategory from "../pages/admin/post/postCategory/update";
+// import CreatePostCategory from "../pages/admin/post/postCategory/create";
 
-import CreatePostComment from "../pages/admin/post/postComment/create";
+// //Post Comment
+// import ListPostComment from "../pages/admin/post/postComment/list";
 
-
-//Post Comment Reaction
-import ListPostCommentReaction from "../pages/admin/post/postCommentReaction/list";
-import CreatePostCommentReaction from "../pages/admin/post/postCommentReaction/create";
+// import CreatePostComment from "../pages/admin/post/postComment/create";
 
 
-//Post File
-import ListPostFile from "../pages/admin/post/postFile/list";
-import CreatePostFile from "../pages/admin/post/postFile/create";
-//Post Reaction
-import ListPostReaction from "../pages/admin/post/postReaction/list";
-import CreatePostReaction from "../pages/admin/post/postReaction/create";
+// //Post Comment Reaction
+// import ListPostCommentReaction from "../pages/admin/post/postCommentReaction/list";
+// import CreatePostCommentReaction from "../pages/admin/post/postCommentReaction/create";
 
 
-//Post View
-import ListPostView from "../pages/admin/post/postView/list";
-import CreatePostView from "../pages/admin/post/postView/create";
+// //Post File
+// import ListPostFile from "../pages/admin/post/postFile/list";
+// import CreatePostFile from "../pages/admin/post/postFile/create";
+// //Post Reaction
+// import ListPostReaction from "../pages/admin/post/postReaction/list";
+// import CreatePostReaction from "../pages/admin/post/postReaction/create";
+
+
+// //Post View
+// import ListPostView from "../pages/admin/post/postView/list";
+// import CreatePostView from "../pages/admin/post/postView/create";
+
 
 // Class Tutor - Chỉnh sửa đường dẫn đúng với cấu trúc mới
 import CreateClassTutor from "../pages/admin/education/classTutor/create";
@@ -69,13 +71,23 @@ const AdminRoutes = () => {
             <Route path="/department" element={<ListDepartment />} />
             <Route path="/department/create" element={<CreateDepartment />} />
             <Route path="/department/:id" element={<UpdateDepartment />} />
+
             
-            
+        
             {/* Course Category */}
             <Route path="/course_category" element={<ListCourseCategory />} />
             <Route path="/course_category/create" element={<CreateCourseCategory />} />
             <Route path="/course_category/:id" element={<UpdateCourseCategory />} />
-            
+
+            {/* Class Tutor */}
+            <Route path="/class_tutor" element={<ListClassTutor />} />
+            <Route path="/class_tutor/create" element={<CreateClassTutor />} />
+            <Route path="/class_tutor/:id" element={<UpdateClassTutor />} />
+
+            {/* Class Room */}
+            <Route path="/classroom" element={<ListClassRoom />} />
+            <Route path="/classroom/create" element={<CreateClassRoom />} />
+            <Route path="/classroom/:id" element={<UpdateClassRoom />} />
         </Routes>
     );
 };
