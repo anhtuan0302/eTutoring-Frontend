@@ -13,13 +13,16 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      if (localStorage.getItem('accessToken')) {
-        const userData = await getCurrentUser();
-        setUser(userData);
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('No token found');
       }
+      const userData = await getCurrentUser();
+      setUser(userData);
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.clear();
+      setUser(null);
     } finally {
       setLoading(false);
     }
@@ -27,22 +30,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-        const response = await loginApi(credentials);
-        localStorage.setItem('accessToken', response.tokens.access.token);
-        localStorage.setItem('refreshToken', response.tokens.refresh.token);
-        setUser(response.user);
-        return response.user;
-      } catch (error) {
-        throw error;
-      }
-    };
+      const response = await loginApi(credentials);
+      localStorage.setItem('accessToken', response.tokens.access.token);
+      localStorage.setItem('refreshToken', response.tokens.refresh.token);
+      setUser(response.user);
+      return response.user;
+    } catch (error) {
+      throw error;
+    }
+  };
 
   const logout = async () => {
+    setLoading(true);
     try {
       await logoutApi();
     } finally {
       localStorage.clear();
       setUser(null);
+      setLoading(false);
     }
   };
 
@@ -61,6 +66,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
+// Thêm export cho useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
