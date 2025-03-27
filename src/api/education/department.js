@@ -88,4 +88,10 @@ const deletedDepartment = async (data) => {
     }
 }
 
-export { createDepartment, getDepartment, updateDepartment, deletedDepartment, getDepartmentByID };
+export { 
+    createDepartment, 
+    getDepartment, 
+    updateDepartment, 
+    deletedDepartment, 
+    getDepartmentByID 
+};

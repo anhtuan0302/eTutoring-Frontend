@@ -8,6 +8,7 @@ import ListTutor from "../pages/admin/tutor/list";
 import ListDepartment from "../pages/admin/education/department/list";
 import CreateDepartment from "../pages/admin/education/department/create";
 import UpdateDepartment from "../pages/admin/education/department/update";
+import DetailDepartment from "../pages/admin/education/department/detail";
 
 // Course Category
 import ListCourseCategory from "../pages/admin/education/courseCategory/list";
@@ -27,26 +28,12 @@ import CreatePostCategory from "../pages/admin/post/postCategory/create";
 
 //Post Comment
 import ListPostComment from "../pages/admin/post/postComment/list";
-
 import CreatePostComment from "../pages/admin/post/postComment/create";
 
 
-//Post Comment Reaction
-import ListPostCommentReaction from "../pages/admin/post/postCommentReaction/list";
-import CreatePostCommentReaction from "../pages/admin/post/postCommentReaction/create";
-
-
-//Post File
-import ListPostFile from "../pages/admin/post/postFile/list";
-import CreatePostFile from "../pages/admin/post/postFile/create";
 //Post Reaction
 import ListPostReaction from "../pages/admin/post/postReaction/list";
 import CreatePostReaction from "../pages/admin/post/postReaction/create";
-
-
-//Post View
-import ListPostView from "../pages/admin/post/postView/list";
-import CreatePostView from "../pages/admin/post/postView/create";
 
 
 // Class Tutor - Chỉnh sửa đường dẫn đúng với cấu trúc mới
@@ -71,8 +58,7 @@ const AdminRoutes = () => {
             <Route path="/department" element={<ListDepartment />} />
             <Route path="/department/create" element={<CreateDepartment />} />
             <Route path="/department/:id" element={<UpdateDepartment />} />
-
-            
+            <Route path="/department/detail/:id" element={<DetailDepartment />} />
         
             {/* Course Category */}
             <Route path="/course_category" element={<ListCourseCategory />} />
@@ -104,21 +90,12 @@ const AdminRoutes = () => {
             <Route path="/post-comment" element={<ListPostComment />} />
             <Route path="/post-comment/create" element={<CreatePostComment />} />
 
-            {/* Post Comment Reaction */}
-            <Route path="/post-comment-reaction" element={<ListPostCommentReaction />} />
-            <Route path="/post-comment-reaction/create" element={<CreatePostCommentReaction />} />
-
-            {/* Post File */}
-            <Route path="/post-file" element={<ListPostFile />} />
-            <Route path="/post-file/create" element={<CreatePostFile />} />
-
+            
             {/* Post Reaction */}
             <Route path="/post-reaction" element={<ListPostReaction />} />
             <Route path="/post-reaction/create" element={<CreatePostReaction />} />
 
-            {/* Post View */}
-            <Route path="/post-view" element={<ListPostView />} />
-            <Route path="/post-view/create" element={<CreatePostView />} />
+          
         </Routes>
     );
 };

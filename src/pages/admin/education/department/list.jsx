@@ -363,7 +363,14 @@ const ListDepartment = () => {
     ),
     onFilter: (value, record) => 
       record.name ? record.name.toLowerCase().includes(value.toLowerCase()) : false,
-    render: (text) => highlightText(text, searchText),
+    render: (text, record) => (
+      <Button 
+        type="link" 
+        onClick={() => navigate(`/admin/department/detail/${record._id}`)}
+      >
+        {highlightText(text, searchText)}
+      </Button>
+    ),
   };
 
   const statusColumn = {

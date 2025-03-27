@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Table, Tag, Button, Popconfirm, message } from "antd";
 import { useNavigate } from "react-router-dom";
-import AdminLayout from "../../../components/layouts/admin/layout"; // Sửa lại đường dẫn AdminLayout
-import { getTutors, deleteTutor } from "../../../api/user/tutor"; // Đường dẫn API đã đúng
+import AdminLayout from "../../../components/layouts/admin/layout"; 
+import { getTutors, deleteTutor } from "../../../api/user/tutor"; 
 
 const ListTutor = () => {
   const [tutors, setTutors] = useState([]);
