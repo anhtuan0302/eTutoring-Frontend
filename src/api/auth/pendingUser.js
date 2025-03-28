@@ -1,25 +1,25 @@
 import { api } from '../config';
 
 export const createPendingUser = (userData) => {
-  return api.post('/pending-user', userData);
+  return api.post('/pendingUser', userData);
 };
 
 export const verifyInvitation = (token) => {
-  return api.get(`/pending-user/verify/${token}`);
+  return api.get(`/pendingUser/verify/${token}`);
 };
 
 export const completeRegistration = (token, data) => {
-  return api.post(`/pending-user/complete/${token}`, data);
+  return api.post(`/pendingUser/complete/${token}`, data);
 };
 
 export const getPendingUsers = () => {
-  return api.get('/pending-user');
+  return api.get('/pendingUser');
 };
 
 export const cancelInvitation = (id) => {
-  return api.delete(`/pending-user/${id}`);
+  return api.delete(`/pendingUser/${id}`);
 };
 
 export const resendInvitation = (id) => {
-  return api.post(`/pending-user/${id}/resend`);
+  return api.post(`/pendingUser/${id}/resend`);
 };
