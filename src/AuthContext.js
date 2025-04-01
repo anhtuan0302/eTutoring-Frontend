@@ -6,6 +6,7 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [accessToken, setAccessToken] = useState(localStorage.getItem('accessToken'));
 
   useEffect(() => {
     checkAuth();
@@ -19,10 +20,12 @@ export const AuthProvider = ({ children }) => {
       }
       const userData = await getCurrentUser();
       setUser(userData);
+      setAccessToken(token); // Thêm dòng này để đồng bộ accessToken
     } catch (error) {
       console.error('Auth check failed:', error);
       localStorage.clear();
       setUser(null);
+      setAccessToken(null); // Thêm dòng này để reset accessToken
     } finally {
       setLoading(false);
     }
@@ -31,8 +34,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await loginApi(credentials);
-      localStorage.setItem('accessToken', response.tokens.access.token);
+      const token = response.tokens.access.token;
+      localStorage.setItem('accessToken', token);
       localStorage.setItem('refreshToken', response.tokens.refresh.token);
+      setAccessToken(token);
+      if (credentials.remember) {
+        localStorage.setItem('remember', 'true');
+      }
       setUser(response.user);
       return response.user;
     } catch (error) {
@@ -47,12 +55,15 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.clear();
       setUser(null);
+      setAccessToken(null); // Thêm dòng này để reset accessToken
       setLoading(false);
     }
   };
 
+  // Chỉ giữ lại một khai báo value
   const value = {
     user,
+    accessToken,
     isAuthenticated: !!user,
     loading,
     login,
@@ -66,7 +77,6 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// Thêm export cho useAuth hook
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

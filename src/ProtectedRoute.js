@@ -5,6 +5,8 @@ const ProtectedRoute = ({ children, roles, isPublic = false }) => {
   const { user, isAuthenticated, loading } = useAuth(); // Thêm loading vào đây
   const location = useLocation();
 
+  const isInvitationRoute = location.pathname.startsWith('/invitation');
+
   // Thêm loading check
   if (loading) {
     // Có thể return một loading spinner hoặc null
@@ -12,15 +14,16 @@ const ProtectedRoute = ({ children, roles, isPublic = false }) => {
   }
 
   // Xử lý public route (như trang login)
-  if (isPublic) {
-    if (isAuthenticated) {
+  if (isPublic || isInvitationRoute) {
+    if (isAuthenticated && !isInvitationRoute) {
+      // Redirect nếu đã đăng nhập (trừ trang invitation)
       if (location.state?.from) {
         return <Navigate to={location.state.from} replace />;
       }
       
       if (user.role === 'admin') return <Navigate to="/admin" replace />;
       if (user.role === 'staff') return <Navigate to="/staff" replace />;
-      if (user.role === 'teacher') return <Navigate to="/teacher" replace />;
+      if (user.role === 'tutor') return <Navigate to="/tutor" replace />;
       if (user.role === 'student') return <Navigate to="/student" replace />;
     }
     return children;

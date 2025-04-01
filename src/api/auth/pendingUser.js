@@ -9,7 +9,21 @@ export const verifyInvitation = (token) => {
 };
 
 export const completeRegistration = (token, data) => {
-  return api.post(`/pendingUser/complete/${token}`, data);
+  // Tạo FormData để gửi cả file và dữ liệu
+  const formData = new FormData();
+  formData.append('password', data.password);
+  formData.append('confirm_password', data.confirm_password);
+  
+  // Thêm file avatar nếu có
+  if (data.avatar) {
+    formData.append('avatar', data.avatar);
+  }
+
+  return api.post(`/pendingUser/complete/${token}`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
 };
 
 export const getPendingUsers = () => {

@@ -48,6 +48,7 @@ const LoginPage = () => {
       const user = await login({
         usernameOrEmail: values.email,
         password: values.password,
+        remember: values.remember // Thêm trường remember
       });
   
   // Ưu tiên chuyển hướng đến trang đã lưu trong location.state

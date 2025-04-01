@@ -3,7 +3,7 @@ import { Button, Result } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
-const Forbidden = () => {
+const ForbiddenPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -64,4 +64,4 @@ const Forbidden = () => {
   );
 };
 
-export default Forbidden;
+export default ForbiddenPage;

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Layout, Menu, theme, Breadcrumb, Typography, Button, Drawer, AutoComplete, Input, Empty, Badge, Avatar, Dropdown, Space, Divider } from "antd";
 import {
-  DashboardOutlined,
-  UserOutlined,
+  CalendarOutlined,
   BookOutlined,
   ReadOutlined,
+  FileTextOutlined,
   MessageOutlined,
   SettingOutlined,
   HomeOutlined,
@@ -13,7 +13,7 @@ import {
   BellOutlined,
   DownOutlined,
   LogoutOutlined,
-  UserSwitchOutlined,
+  UsergroupAddOutlined,
 } from "@ant-design/icons";
 
 const { Header, Sider, Content, Footer } = Layout;
@@ -36,7 +36,7 @@ const renderUserMenu = () => (
     items={[
       {
         key: '1',
-        icon: <UserOutlined />,
+        // icon: <UserOutlined />,
         label: 'Profile',
       },
       {
@@ -61,19 +61,36 @@ const renderUserMenu = () => (
 const getMenuItems = () => {
   return [
     {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
-    },
-    {
-      key: "calendar",
+      key: "calender",
       icon: <CalendarOutlined />,
-      label: "Calendar",
+      label: "Calender",
     },
     {
-      key: "courses",
-      icon: <BookOutlined />,
-      label: "Course Management",
+      key: "course",
+      icon: <UsergroupAddOutlined />,
+      label: "Course",
+      children: [
+        {
+          key: "course-categories",
+          label: "Course Categories",
+        },
+        {
+          key: "course-list",
+          label: "Courses",
+        },
+        {
+          key: "classes",
+          label: "Classes",
+        },
+        {
+          key: "class-tutors",
+          label: "Tutor Assignments",
+        },
+        {
+          key: "enrollments",
+          label: "Enrollments",
+        },
+      ],
     },
     {
       key: "learning",
@@ -107,6 +124,25 @@ const getMenuItems = () => {
         {
           key: "class-reviews",
           label: "Class Reviews",
+        },
+      ],
+    },
+    {
+      key: "homework",
+      icon: <FileTextOutlined />,
+      label: "Homework",
+      children: [
+        {
+          key: "post-categories",
+          label: "Post Categories",
+        },
+        {
+          key: "posts",
+          label: "Posts",
+        },
+        {
+          key: "post-comments",
+          label: "Comments",
         },
       ],
     },
@@ -349,7 +385,7 @@ const TutorLayout = ({ children, title }) => {
             {!isMobile && (
               <Dropdown overlay={renderUserMenu()} placement="bottomRight">
                 <Space style={{ cursor: 'pointer', color: THEME_COLORS.textPrimary }}>
-                  <Avatar icon={<UserOutlined />} size="small" />
+                  {/* <Avatar icon={<UserOutlined />} size="small" /> */}
                   <span>Admin User</span>
                   <DownOutlined style={{ fontSize: '12px' }} />
                 </Space>
@@ -405,7 +441,7 @@ const TutorLayout = ({ children, title }) => {
             {/* User info in mobile menu */}
             <div style={{ padding: '16px 24px', borderBottom: `1px solid ${THEME_COLORS.borderColor}`, borderTop: `1px solid ${THEME_COLORS.borderColor}` }}>
               <Space>
-                <Avatar icon={<UserOutlined />} size="default" />
+                {/* <Avatar icon={<UserOutlined />} size="default" /> */}
                 <div>
                   <div style={{ fontWeight: 'bold' }}>Admin User</div>
                   <div style={{ fontSize: '12px', color: THEME_COLORS.textSecondary }}>admin@example.com</div>

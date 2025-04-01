@@ -76,25 +76,6 @@ const getMenuItems = () => {
       ],
     },
     {
-      key: "permissions",
-      icon: <SafetyCertificateOutlined />, // Sử dụng icon thay thế
-      label: "Access Control",
-      children: [
-        {
-          key: "roles",
-          label: "Roles",
-        },
-        {
-          key: "permissions-list",
-          label: "Permissions",
-        },
-        {
-          key: "role-permissions",
-          label: "Role Permissions",
-        },
-      ],
-    },
-    {
       key: "courses",
       icon: <BookOutlined />,
       label: "Course Management",

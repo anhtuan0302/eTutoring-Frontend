@@ -15,24 +15,23 @@ import {
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
 import {
-  getAllDepartments,
-  deleteDepartment,
-  createDepartment,
-} from "../../../../api/organization/department";
+  getAllCourses,
+  deleteCourse,
+  createCourse,
+} from "../../../../api/education/course";
+import { getAllDepartments } from "../../../../api/organization/department";
 import {
   SearchOutlined,
   DeleteOutlined,
   DownloadOutlined,
   UploadOutlined,
-  EditOutlined,
+  FilterOutlined,
   EyeOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 
-const ListDepartments = ({
-  basePath, // path prefix sẽ được tự động xác định dựa vào role nếu không được cung cấp
-  customPermissions, // optional - ghi đè permissions từ role
-}) => {
+const ListCourses = ({ basePath, customPermissions }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -106,13 +105,14 @@ const ListDepartments = ({
     }
   }, [customPermissions, user?.role]);
 
+  const [courses, setCourses] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 10,
+    pageSize: 5,
     total: 0,
   });
   const [importLoading, setImportLoading] = useState(false);
@@ -121,81 +121,84 @@ const ListDepartments = ({
   const [nameFilter, setNameFilter] = useState(null);
   const [isImportGuideVisible, setIsImportGuideVisible] = useState(false);
 
-  const fetchDepartments = useCallback(async () => {
+  const fetchCourses = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await getAllDepartments();
-      setDepartments(data); // Sửa từ activeDepartments thành data
+      const data = await getAllCourses();
+      setCourses(data);
       setPagination((prev) => ({
         ...prev,
-        total: data.length, // Sửa từ activeDepartments.length thành data.length
+        total: data.length,
       }));
     } catch (error) {
-      console.error("Error fetching departments:", error);
-      message.error("Failed to load department list");
+      console.error("Error fetching courses:", error);
+      message.error("Failed to load course list");
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const data = await getAllDepartments();
+        setDepartments(data);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      }
+    };
     fetchDepartments();
-  }, [fetchDepartments]);
+    fetchCourses();
+  }, [fetchCourses]);
 
   const handleDelete = useCallback(
     async (id) => {
       try {
-        await deleteDepartment(id);
+        await deleteCourse(id);
 
-        const updatedDepartments = departments.filter((dep) => dep._id !== id);
-        setDepartments(updatedDepartments);
+        const updatedCourses = courses.filter((course) => course._id !== id);
+        setCourses(updatedCourses);
         setSelectedRowKeys((prev) => prev.filter((key) => key !== id));
         setPagination((prev) => ({
           ...prev,
-          total: updatedDepartments.length,
+          total: updatedCourses.length,
         }));
 
-        message.success("Department deleted successfully");
+        message.success("Course deleted successfully");
       } catch (error) {
-        message.error(
-          error.response?.data?.error || "Error deleting department"
-        );
+        message.error(error.response?.data?.error || "Error deleting course");
         console.error("Error details:", error);
       }
     },
-    [departments]
+    [courses]
   );
 
   const handleDeleteMultiple = useCallback(async () => {
     try {
       if (selectedRowKeys.length === 0) {
-        message.warning("Please select at least one department to delete");
+        message.warning("Please select at least one course to delete"); // Sửa text này nữa
         return;
       }
 
-      const deletePromises = selectedRowKeys.map((id) => deleteDepartment(id));
+      const deletePromises = selectedRowKeys.map((id) => deleteCourse(id)); // Sửa từ deleteDepartment thành deleteCourse
       await Promise.all(deletePromises);
 
-      const updatedDepartments = departments.filter(
-        (dep) => !selectedRowKeys.includes(dep._id)
+      const updatedCourses = courses.filter(
+        (course) => !selectedRowKeys.includes(course._id)
       );
-      setDepartments(updatedDepartments);
+      setCourses(updatedCourses);
       setSelectedRowKeys([]);
       setPagination((prev) => ({
         ...prev,
-        total: updatedDepartments.length,
+        total: updatedCourses.length,
       }));
 
-      message.success(
-        `Deleted ${selectedRowKeys.length} departments successfully`
-      );
+      message.success(`Deleted ${selectedRowKeys.length} courses successfully`);
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Error deleting departments"
-      );
+      message.error(error.response?.data?.error || "Error deleting courses");
       console.error("Error details:", error);
     }
-  }, [departments, selectedRowKeys]);
+  }, [courses, selectedRowKeys]);
 
   const highlightText = useCallback((text, search) => {
     if (!search || !text) return text || "-";
@@ -227,52 +230,9 @@ const ListDepartments = ({
       );
   }, []);
 
-  const filteredDepartments = useMemo(() => {
-    let result = [...departments];
-    const search = searchText.toLowerCase();
-
-    // Apply name filter if exists
-    if (nameFilter) {
-      result = result.filter((department) =>
-        department.name?.toLowerCase().includes(nameFilter.toLowerCase())
-      );
-    }
-
-    // Apply search text filter
-    if (search) {
-      result = result.filter((department) => {
-        const name = department.name ? department.name.toLowerCase() : "";
-        const description = department.description
-          ? department.description.toLowerCase()
-          : "";
-        return name.includes(search) || description.includes(search);
-      });
-    }
-
-    return result;
-  }, [departments, searchText, nameFilter]);
-
   const handleTableChange = useCallback((newPagination) => {
     setPagination(newPagination);
   }, []);
-
-  const exportToExcel = useCallback(() => {
-    const dataToExport = filteredDepartments.map((department) => ({
-      Name: department.name || "-",
-      Description: department.description || "-",
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Departments");
-
-    const today = new Date();
-    const dateStr = `${today.getDate()}-${
-      today.getMonth() + 1
-    }-${today.getFullYear()}`;
-
-    XLSX.writeFile(workbook, `Departments_${dateStr}.xlsx`);
-  }, [filteredDepartments]);
 
   const beforeUpload = useCallback((file) => {
     const isExcel =
@@ -289,12 +249,16 @@ const ListDepartments = ({
   const downloadTemplate = useCallback(() => {
     const sampleData = [
       {
-        Name: "Information Technology",
-        Description: "Department for IT and Computer Science",
+        Code: "COMP1234",
+        Name: "Introduction to Programming",
+        Department: "Information Technology",
+        Description: "Basic programming concepts and algorithms",
       },
       {
-        Name: "Business Administration",
-        Description: "Department for Business and Management Studies",
+        Code: "MATH2345",
+        Name: "Advanced Mathematics",
+        Department: "Mathematics",
+        Description: "Advanced mathematical concepts and theories",
       },
     ];
 
@@ -304,12 +268,14 @@ const ListDepartments = ({
 
     // Set độ rộng cột
     const colWidths = [
-      { wch: 25 }, // Name
+      { wch: 12 }, // Code
+      { wch: 30 }, // Name
+      { wch: 25 }, // Department
       { wch: 40 }, // Description
     ];
     worksheet["!cols"] = colWidths;
 
-    XLSX.writeFile(workbook, "Departments_Template.xlsx");
+    XLSX.writeFile(workbook, "Courses_Template.xlsx");
   }, []);
 
   const ImportGuideModal = useCallback(() => {
@@ -336,17 +302,24 @@ const ListDepartments = ({
         width={700}
       >
         <div style={{ marginBottom: "20px" }}>
-          <h4>Instructions for importing departments:</h4>
+          <h4>Instructions for importing courses:</h4>
           <ol>
             <li>Download the template file using the button below</li>
             <li>
               Fill in the data following these rules:
               <ul style={{ marginTop: "10px" }}>
                 <li>
-                  <strong>Name</strong>: Required, must be unique
+                  <strong>Code</strong>: Required, unique course code
                 </li>
                 <li>
-                  <strong>Description</strong>: Optional, text description
+                  <strong>Name</strong>: Required, course name
+                </li>
+                <li>
+                  <strong>Department</strong>: Required, must match existing
+                  department name
+                </li>
+                <li>
+                  <strong>Description</strong>: Optional, course description
                 </li>
               </ul>
             </li>
@@ -368,7 +341,13 @@ const ListDepartments = ({
             <thead>
               <tr>
                 <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  Code
+                </th>
+                <th style={{ border: "1px solid #ddd", padding: "8px" }}>
                   Name
+                </th>
+                <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  Department
                 </th>
                 <th style={{ border: "1px solid #ddd", padding: "8px" }}>
                   Description
@@ -378,10 +357,16 @@ const ListDepartments = ({
             <tbody>
               <tr>
                 <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  COMP1234
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  Introduction to Programming
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
                   Information Technology
                 </td>
                 <td style={{ border: "1px solid #ddd", padding: "8px" }}>
-                  Department for IT and Computer Science
+                  Basic programming concepts and algorithms
                 </td>
               </tr>
             </tbody>
@@ -391,7 +376,8 @@ const ListDepartments = ({
         <div style={{ marginTop: "20px" }}>
           <h4>Notes:</h4>
           <ul>
-            <li>Department names must be unique</li>
+            <li>Course codes must be unique</li>
+            <li>Department names must match existing departments</li>
             <li>Maximum 500 records per import</li>
             <li>File size should not exceed 5MB</li>
           </ul>
@@ -421,27 +407,6 @@ const ListDepartments = ({
     });
   }, []);
 
-  const validateImportData = useCallback(
-    (data) => {
-      const errors = [];
-      const nameSet = new Set(departments.map((d) => d.name.toLowerCase()));
-
-      data.forEach((row, index) => {
-        const rowNumber = index + 2;
-
-        if (!row["Name"] && !row["Department Name"]) {
-          errors.push(`Row ${rowNumber}: Missing department name`);
-        }
-      });
-
-      return {
-        hasErrors: errors.length > 0,
-        errors,
-      };
-    },
-    [departments]
-  );
-
   const showImportErrors = useCallback((errors) => {
     message.error({
       content: (
@@ -464,26 +429,74 @@ const ListDepartments = ({
       errorCount: 0,
       errors: [],
     };
-
+  
     for (const [index, row] of data.entries()) {
       try {
-        await createDepartment({
-          name: row["Name"] || row["Department Name"],
-          description: row["Description"] || "",
+        // Tìm department_id dựa trên tên department
+        const department = departments.find(
+          dept => dept.name === row['Department']
+        );
+        
+        if (!department) {
+          throw new Error(`Department "${row['Department']}" not found`);
+        }
+  
+        await createCourse({
+          code: row['Code'],
+          name: row['Name'],
+          description: row['Description'] || '',
+          department_id: department._id
         });
         results.successCount++;
       } catch (error) {
         results.errorCount++;
         results.errors.push({
           row: index + 2,
-          name: row["Name"] || row["Department Name"],
-          error: error.response?.data?.error || error.message,
+          code: row['Code'],
+          name: row['Name'],
+          error: error.response?.data?.error || error.message
         });
       }
     }
-
+    
     return results;
-  }, []);
+  }, [departments]);
+
+  // Sửa lại hàm validate import
+  const validateImportData = useCallback(
+    (data) => {
+      const errors = [];
+
+      data.forEach((row, index) => {
+        const rowNumber = index + 2;
+
+        if (!row["Code"]) {
+          errors.push(`Row ${rowNumber}: Missing course code`);
+        }
+        if (!row["Name"]) {
+          errors.push(`Row ${rowNumber}: Missing course name`);
+        }
+        if (!row["Department"]) {
+          errors.push(`Row ${rowNumber}: Missing department`);
+        } else {
+          const departmentExists = departments.some(
+            (dept) => dept.name === row["Department"]
+          );
+          if (!departmentExists) {
+            errors.push(
+              `Row ${rowNumber}: Department "${row["Department"]}" not found`
+            );
+          }
+        }
+      });
+
+      return {
+        hasErrors: errors.length > 0,
+        errors,
+      };
+    },
+    [departments]
+  );
 
   const handleImport = useCallback(
     async (info) => {
@@ -504,9 +517,9 @@ const ListDepartments = ({
         setImportResults(results);
         setImportModalVisible(true);
         message.success(
-          `Imported ${results.successCount} departments successfully`
+          `Imported ${results.successCount} courses successfully`
         );
-        fetchDepartments();
+        fetchCourses();
       } catch (error) {
         console.error("Import error:", error);
         message.error(`Import failed: ${error.message}`);
@@ -515,7 +528,7 @@ const ListDepartments = ({
       }
     },
     [
-      fetchDepartments,
+      fetchCourses,
       processImportData,
       readExcelFile,
       showImportErrors,
@@ -561,48 +574,56 @@ const ListDepartments = ({
     );
   }, [importModalVisible, importResults]);
 
-  // Table columns
   const columns = useMemo(() => {
     const baseColumns = [
       {
+        title: "Code",
+        dataIndex: "code",
+        key: "code",
+        sorter: (a, b) => a.code.localeCompare(b.code),
+        render: (text) => highlightText(text, searchText),
+      },
+      {
         title: "Name",
+        dataIndex: "name",
         key: "name",
+        sorter: (a, b) => a.name.localeCompare(b.name),
+        render: (text) => highlightText(text, searchText),
+      },
+      {
+        title: "Department",
+        key: "department",
         render: (_, record) => (
-          <Tag color="blue">{highlightText(record.name, searchText)}</Tag>
+          <Tag color="blue">
+            {record.department_id?.name || "No Department"}
+          </Tag>
         ),
-        sorter: (a, b) => (a.name || "").localeCompare(b.name || ""),
         filters: departments.map((dept) => ({
           text: dept.name,
           value: dept._id,
         })),
-        onFilter: (value, record) => record._id === value,
+        onFilter: (value, record) => record.department_id?._id === value,
       },
       {
         title: "Description",
+        dataIndex: "description",
         key: "description",
-        render: (_, record) => highlightText(record.description, searchText),
-      },
-      {
-        title: "Created At",
-        key: "createdAt",
-        render: (_, record) =>
-          record.createdAt ? new Date(record.createdAt).toLocaleString() : "-",
-        sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-      },
-      {
-        title: "Updated At",
-        key: "updatedAt",
-        render: (_, record) =>
-          record.updatedAt ? new Date(record.updatedAt).toLocaleString() : "-",
-        sorter: (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt),
+        ellipsis: {
+          showTitle: false,
+        },
+        render: (text) => (
+          <Tooltip placement="topLeft" title={text || "-"}>
+            {highlightText(text || "-", searchText)}
+          </Tooltip>
+        ),
       },
     ];
 
-    if (permissions.canEdit || permissions.canView) {
+    if (permissions.canEdit || permissions.canDelete || permissions.canView) {
       baseColumns.push({
         title: "Actions",
         key: "actions",
-        width: 120,
+        width: 120, // Thêm độ rộng cố định
         render: (_, record) => (
           <Space size="small">
             {permissions.canView && (
@@ -611,7 +632,7 @@ const ListDepartments = ({
                 icon={<EyeOutlined />}
                 size="small"
                 onClick={() =>
-                  navigate(`${effectiveBasePath}/department/${record._id}`)
+                  navigate(`${effectiveBasePath}/course/${record._id}`)
                 }
               />
             )}
@@ -622,13 +643,13 @@ const ListDepartments = ({
                 size="small"
                 style={{ backgroundColor: "#faad14" }} // Màu vàng
                 onClick={() =>
-                  navigate(`${effectiveBasePath}/department/${record._id}/edit`)
+                  navigate(`${effectiveBasePath}/course/edit/${record._id}`)
                 }
               />
             )}
             {permissions.canDelete && (
               <Popconfirm
-                title="Are you sure you want to delete this department?"
+                title="Are you sure you want to delete this course?"
                 onConfirm={() => handleDelete(record._id)}
                 okText="Yes"
                 cancelText="No"
@@ -648,22 +669,66 @@ const ListDepartments = ({
 
     return baseColumns;
   }, [
+    departments,
+    permissions,
     effectiveBasePath,
     navigate,
-    permissions,
-    searchText,
+    handleDelete,
     highlightText,
-    departments,
+    searchText,
   ]);
+
+  const filteredCourses = useMemo(() => {
+    let result = [...courses];
+    const search = searchText.toLowerCase();
+
+    if (nameFilter) {
+      result = result.filter((course) =>
+        course.name?.toLowerCase().includes(nameFilter.toLowerCase())
+      );
+    }
+
+    if (search) {
+      result = result.filter((course) => {
+        return (
+          course.code?.toLowerCase().includes(search) ||
+          course.name?.toLowerCase().includes(search) ||
+          course.description?.toLowerCase().includes(search) ||
+          course.department_id?.name?.toLowerCase().includes(search)
+        );
+      });
+    }
+
+    return result;
+  }, [courses, searchText, nameFilter]);
+
+  // Sửa lại hàm export
+  const exportToExcel = useCallback(() => {
+    const dataToExport = filteredCourses.map((course) => ({
+      Code: course.code || "-",
+      Name: course.name || "-",
+      Department: course.department_id?.name || "-",
+      Description: course.description || "-"
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Courses");
+
+    const today = new Date();
+    const dateStr = `${today.getDate()}-${
+      today.getMonth() + 1
+    }-${today.getFullYear()}`;
+
+    XLSX.writeFile(workbook, `Courses_${dateStr}.xlsx`);
+  }, [filteredCourses]);
 
   const renderEmpty = useCallback(() => {
     return (
       <Empty
         description={
           <span>
-            {searchText
-              ? "No departments match your search"
-              : "No departments found"}
+            {searchText ? "No courses match your search" : "No courses found"}
           </span>
         }
       />
@@ -681,20 +746,18 @@ const ListDepartments = ({
         }}
       >
         <Space>
-          {/* Nút Add New - chỉ hiển thị nếu có quyền create */}
           {permissions.canCreate && (
             <Button
               type="primary"
-              onClick={() => navigate(`${effectiveBasePath}/department/create`)}
+              onClick={() => navigate(`${effectiveBasePath}/course/create`)}
             >
-              Add New
+              Add Course
             </Button>
           )}
 
-          {/* Nút Delete Selected - chỉ hiển thị nếu có quyền bulk delete và có items được chọn */}
           {permissions.canBulkDelete && selectedRowKeys.length > 0 && (
             <Popconfirm
-              title={`Are you sure you want to delete ${selectedRowKeys.length} selected departments?`}
+              title={`Are you sure you want to delete ${selectedRowKeys.length} selected courses?`}
               onConfirm={handleDeleteMultiple}
               okText="Yes"
               cancelText="No"
@@ -707,9 +770,8 @@ const ListDepartments = ({
         </Space>
 
         <Space>
-          {/* Thanh tìm kiếm - luôn hiển thị */}
           <Input
-            placeholder="Search departments..."
+            placeholder="Search courses..."
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
             value={searchText}
@@ -717,7 +779,6 @@ const ListDepartments = ({
             allowClear
           />
 
-          {/* Nút Import - chỉ hiển thị nếu có quyền import */}
           {permissions.canImport && (
             <>
               <Button
@@ -740,15 +801,9 @@ const ListDepartments = ({
             </>
           )}
           <ImportGuideModal />
-          {importModalVisible && showImportResults()}
 
-          {/* Nút Export - chỉ hiển thị nếu có quyền export */}
           {permissions.canExport && (
-            <Button
-              type="default"
-              icon={<DownloadOutlined />}
-              onClick={exportToExcel}
-            >
+            <Button icon={<DownloadOutlined />} onClick={exportToExcel}>
               Export Excel
             </Button>
           )}
@@ -757,7 +812,7 @@ const ListDepartments = ({
 
       <Table
         columns={columns}
-        dataSource={filteredDepartments}
+        dataSource={filteredCourses}
         rowKey="_id"
         loading={loading}
         bordered
@@ -773,17 +828,19 @@ const ListDepartments = ({
         pagination={{
           ...pagination,
           showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
+          pageSizeOptions: ["5", "10", "20", "50", "100"],
           showTotal: (total, range) =>
-            `${range[0]}-${range[1]} of ${total} departments`,
+            `${range[0]}-${range[1]} of ${total} courses`,
         }}
         onChange={handleTableChange}
         locale={{
           emptyText: renderEmpty(),
         }}
       />
+
+      {importModalVisible && showImportResults()}
     </div>
   );
 };
 
-export default ListDepartments;
+export default ListCourses;

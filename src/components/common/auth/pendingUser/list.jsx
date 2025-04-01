@@ -11,6 +11,7 @@ import {
   Tag,
   Upload,
   Modal,
+  Progress,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
@@ -44,7 +45,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 5,
+    pageSize: 10,
     total: 0,
   });
   const [roleFilter, setRoleFilter] = useState(null);
@@ -52,6 +53,8 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [isImportGuideVisible, setIsImportGuideVisible] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Xác định basePath
   const effectiveBasePath = useMemo(() => {
@@ -116,16 +119,30 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
 
   useEffect(() => {
     const fetchDepartments = async () => {
-        try {
-            const data = await getAllDepartments();
-            setDepartments(data);
-        } catch (error) {
-            console.error("Error fetching departments:", error);
-        }
+      try {
+        const data = await getAllDepartments();
+        setDepartments(data);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      }
     };
     fetchDepartments();
     fetchPendingUsers();
   }, [fetchPendingUsers]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue =
+          "Dữ liệu đang được tải lên. Bạn có chắc chắn muốn rời khỏi trang?";
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isUploading]);
 
   // Handle actions
   const handleCancel = useCallback(
@@ -427,6 +444,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
   }, []);
 
   // Hàm validate dữ liệu import
+  // Sửa lại hàm validateImportData
   const validateImportData = useCallback((data) => {
     const errors = [];
     const validRoles = ["admin", "staff", "tutor", "student"];
@@ -442,6 +460,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
 
     data.forEach((row, index) => {
       const rowNumber = index + 2;
+      const role = row["Role"]?.toLowerCase();
 
       // Kiểm tra email trùng
       if (row["Email"]) {
@@ -452,7 +471,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
         }
       }
 
-      // Các validation khác giữ nguyên
+      // Các validation bắt buộc
       if (!row["First Name"]) {
         errors.push(`Row ${rowNumber}: Missing first name`);
       }
@@ -466,15 +485,24 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
       }
       if (!row["Role"]) {
         errors.push(`Row ${rowNumber}: Missing role`);
-      } else if (!validRoles.includes(row["Role"].toLowerCase())) {
+      } else if (!validRoles.includes(role)) {
         errors.push(
           `Row ${rowNumber}: Invalid role. Must be one of: ${validRoles.join(
             ", "
           )}`
         );
       }
-      if (!row["Department"]) {
-        errors.push(`Row ${rowNumber}: Missing department`);
+
+      // Chỉ kiểm tra department nếu role không phải admin
+      if (role && role !== "admin") {
+        if (!row["Department"]) {
+          errors.push(`Row ${rowNumber}: Missing department`);
+        }
+      }
+
+      // Kiểm tra phone number nếu có (optional)
+      if (row["Phone Number"] && !/^[0-9+\-\s()]*$/.test(row["Phone Number"])) {
+        errors.push(`Row ${rowNumber}: Invalid phone number format`);
       }
     });
 
@@ -484,11 +512,13 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
     };
   }, []);
 
-  // Hàm xử lý import
+  // Sửa lại hàm handleImport
   const handleImport = useCallback(
     async (info) => {
       const { file } = info;
       setImportLoading(true);
+      setIsUploading(true);
+      setUploadProgress(0);
 
       try {
         const data = await readExcelFile(file);
@@ -518,6 +548,8 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
             width: 500,
           });
           setImportLoading(false);
+          setIsUploading(false);
+          setUploadProgress(0);
           return;
         }
 
@@ -527,26 +559,37 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
           errors: [],
         };
 
+        // Tính toán progress step cho mỗi item
+        const progressStep = 100 / data.length;
+
         for (const [index, row] of data.entries()) {
           try {
-            // Tìm department_id dựa trên tên department
-            const department = departments.find(
-              (dept) => dept.name === row["Department"]
-            );
-            
-            if (!department) {
-              throw new Error(`Department "${row["Department"]}" not found`);
+            const role = row["Role"].toLowerCase();
+            let department_id = undefined;
+
+            if (role !== "admin") {
+              const department = departments.find(
+                (dept) => dept.name === row["Department"]
+              );
+
+              if (!department) {
+                throw new Error(`Department "${row["Department"]}" not found`);
+              }
+              department_id = department._id;
             }
 
             await createPendingUser({
               first_name: row["First Name"],
               last_name: row["Last Name"],
               email: row["Email"],
-              phone_number: row["Phone Number"] || null,
-              role: row["Role"].toLowerCase(),
-              department_id: department._id, // Sử dụng department._id thay vì tên
+              phone_number: row["Phone Number"] || undefined,
+              role: role,
+              department_id: department_id,
             });
             results.successCount++;
+
+            // Cập nhật progress
+            setUploadProgress(Math.min(100, (index + 1) * progressStep));
           } catch (error) {
             results.errorCount++;
             results.errors.push({
@@ -571,10 +614,34 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
         message.error(`Import failed: ${error.message}`);
       } finally {
         setImportLoading(false);
+        setIsUploading(false);
+        setUploadProgress(0);
       }
     },
-    [fetchPendingUsers, readExcelFile, validateImportData, departments] // Thêm departments vào dependencies
+    [fetchPendingUsers, readExcelFile, validateImportData, departments]
   );
+
+  // Thêm Modal hiển thị progress
+  const UploadProgressModal = useCallback(() => {
+    return (
+      <Modal
+        title="Uploading Data"
+        open={isUploading}
+        closable={false}
+        footer={null}
+        maskClosable={false}
+        width={400}
+      >
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            Please do not close or refresh the page while data is being
+            uploaded...
+          </div>
+          <Progress percent={Math.round(uploadProgress)} status="active" />
+        </div>
+      </Modal>
+    );
+  }, [isUploading, uploadProgress]);
 
   // Modal hiển thị kết quả import
   const ImportResultsModal = useCallback(() => {
@@ -630,9 +697,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
         "First Name": "Jane",
         "Last Name": "Smith",
         Email: "jane.smith@example.com",
-        "Phone Number": "0987654321",
-        Role: "tutor",
-        Department: "Computer Science",
+        Role: "admin", // Ví dụ không có phone number và department
       },
     ];
 
@@ -695,15 +760,15 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
                   <strong>Email</strong>: Required, must be valid email format
                 </li>
                 <li>
-                  <strong>Phone Number</strong>: Optional, numbers only
+                  <strong>Phone Number</strong>: Optional, can be left empty
                 </li>
                 <li>
                   <strong>Role</strong>: Required, must be one of: admin, staff,
                   tutor, student
                 </li>
                 <li>
-                  <strong>Department</strong>: Required, must match existing
-                  department name
+                  <strong>Department</strong>: Required for staff/tutor/student,
+                  not needed for admin role
                 </li>
               </ul>
             </li>
@@ -849,6 +914,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
             </>
           )}
           <ImportGuideModal />
+          <UploadProgressModal />
           {permissions.canExport && (
             <Button icon={<DownloadOutlined />} onClick={exportToExcel}>
               Export Excel
@@ -876,7 +942,7 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
         pagination={{
           ...pagination,
           showSizeChanger: true,
-          pageSizeOptions: ["5", "10", "20", "50", "100"],
+          pageSizeOptions: ["10", "20", "50", "100"],
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} pending users`,
         }}

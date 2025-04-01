@@ -31,6 +31,7 @@ const CreatePendingUser = ({
   const [errorMessage, setErrorMessage] = useState("");
   const [departments, setDepartments] = useState([]);
   const [departmentsLoading, setDepartmentsLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(null);
 
   // Xác định basePath dựa theo role nếu không được cung cấp
   const effectiveBasePath = useMemo(() => {
@@ -66,6 +67,15 @@ const CreatePendingUser = ({
     }
   }, [customPermissions, user?.role]);
 
+  // Xử lý khi role thay đổi
+  const handleRoleChange = (value) => {
+    setSelectedRole(value);
+    // Reset department_id field nếu chọn role admin
+    if (value === "admin") {
+      form.setFieldValue("department_id", undefined);
+    }
+  };
+
   // Kiểm tra quyền - nếu không có quyền, redirect về trang list
   useEffect(() => {
     if (!permissions.canCreate) {
@@ -95,14 +105,18 @@ const CreatePendingUser = ({
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await createPendingUser(values);
+      const dataToSubmit = {
+        ...values,
+        department_id: values.role === 'admin' ? undefined : values.department_id
+      };
+  
+      await createPendingUser(dataToSubmit);
       message.success("Invitation sent successfully!");
       setTimeout(() => {
         navigate(`${effectiveBasePath}/pendingUser`);
       }, 1000);
     } catch (error) {
-      const apiError =
-        error.response?.data?.error || "Failed to send invitation";
+      const apiError = error.response?.data?.error || "Failed to send invitation";
       setErrorMessage(apiError);
       setIsModalVisible(true);
     } finally {
@@ -128,64 +142,70 @@ const CreatePendingUser = ({
         </Button>
       </div>
 
-        <Form form={form} layout="vertical" onFinish={onFinish}>
-          <Form.Item
-            label="First Name"
-            name="first_name"
-            rules={[{ required: true, message: "Please enter first name!" }]}
-          >
-            <Input placeholder="Enter first name" />
-          </Form.Item>
+      <Form form={form} layout="vertical" onFinish={onFinish}>
+        <Form.Item
+          label="First Name"
+          name="first_name"
+          rules={[{ required: true, message: "Please enter first name!" }]}
+        >
+          <Input placeholder="Enter first name" />
+        </Form.Item>
 
-          <Form.Item
-            label="Last Name"
-            name="last_name"
-            rules={[{ required: true, message: "Please enter last name!" }]}
-          >
-            <Input placeholder="Enter last name" />
-          </Form.Item>
+        <Form.Item
+          label="Last Name"
+          name="last_name"
+          rules={[{ required: true, message: "Please enter last name!" }]}
+        >
+          <Input placeholder="Enter last name" />
+        </Form.Item>
 
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: "Please enter email!" },
-              { type: "email", message: "Please enter a valid email!" },
-            ]}
-          >
-            <Input placeholder="Enter email address" />
-          </Form.Item>
+        <Form.Item
+          label="Email"
+          name="email"
+          rules={[
+            { required: true, message: "Please enter email!" },
+            { type: "email", message: "Please enter a valid email!" },
+          ]}
+        >
+          <Input placeholder="Enter email address" />
+        </Form.Item>
 
-          <Form.Item
-            label="Phone Number"
-            name="phone_number"
-            rules={[
-              {
-                pattern: /^[0-9+\-\s()]*$/,
-                message: "Please enter a valid phone number!",
-              },
-            ]}
-          >
-            <Input placeholder="Enter phone number (optional)" />
-          </Form.Item>
+        <Form.Item
+          label="Phone Number"
+          name="phone_number"
+          rules={[
+            {
+              pattern: /^[0-9+\-\s()]*$/,
+              message: "Please enter a valid phone number!",
+            },
+          ]}
+        >
+          <Input placeholder="Enter phone number (optional)" />
+        </Form.Item>
 
-          <Form.Item
-            label="Role"
-            name="role"
-            rules={[{ required: true, message: "Please select a role!" }]}
-          >
-            <Select placeholder="Select user role">
-              {user?.role === "admin" && <Option value="admin">Admin</Option>}
-              <Option value="staff">Staff</Option>
-              <Option value="tutor">Tutor</Option>
-              <Option value="student">Student</Option>
-            </Select>
-          </Form.Item>
+        <Form.Item
+          label="Role"
+          name="role"
+          rules={[{ required: true, message: "Please select a role!" }]}
+        >
+          <Select placeholder="Select user role" onChange={handleRoleChange}>
+            {user?.role === "admin" && <Option value="admin">Admin</Option>}
+            <Option value="staff">Staff</Option>
+            <Option value="tutor">Tutor</Option>
+            <Option value="student">Student</Option>
+          </Select>
+        </Form.Item>
 
+        {selectedRole !== "admin" && (
           <Form.Item
             label="Department"
             name="department_id"
-            rules={[{ required: true, message: "Please select a department!" }]}
+            rules={[
+              {
+                required: selectedRole !== "admin",
+                message: "Please select a department!",
+              },
+            ]}
           >
             <Select
               placeholder="Select department"
@@ -198,19 +218,20 @@ const CreatePendingUser = ({
               ))}
             </Select>
           </Form.Item>
+        )}
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Send Invitation
-            </Button>
-            <Button
-              style={{ marginLeft: 8 }}
-              onClick={() => navigate(`${effectiveBasePath}/pendingUser`)}
-            >
-              Cancel
-            </Button>
-          </Form.Item>
-        </Form>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            Send Invitation
+          </Button>
+          <Button
+            style={{ marginLeft: 8 }}
+            onClick={() => navigate(`${effectiveBasePath}/pendingUser`)}
+          >
+            Cancel
+          </Button>
+        </Form.Item>
+      </Form>
 
       {/* Modal thông báo lỗi */}
       <Modal
