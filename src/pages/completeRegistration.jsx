@@ -388,6 +388,7 @@ const CompleteRegistrationPage = () => {
             {registeredUser.role === "student" && "Sinh viên"}
             {registeredUser.role === "tutor" && "Giảng viên"}
             {registeredUser.role === "staff" && "Nhân viên"}
+            {registeredUser.role === "admin" && "Quản trị viên"}
           </Descriptions.Item>
         </Descriptions>
       </Card>
