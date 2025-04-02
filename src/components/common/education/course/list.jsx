@@ -112,7 +112,7 @@ const ListCourses = ({ basePath, customPermissions }) => {
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
-    pageSize: 5,
+    pageSize: 10,
     total: 0,
   });
   const [importLoading, setImportLoading] = useState(false);
@@ -643,7 +643,7 @@ const ListCourses = ({ basePath, customPermissions }) => {
                 size="small"
                 style={{ backgroundColor: "#faad14" }} // Màu vàng
                 onClick={() =>
-                  navigate(`${effectiveBasePath}/course/edit/${record._id}`)
+                  navigate(`${effectiveBasePath}/course/${record._id}/edit`)
                 }
               />
             )}
@@ -828,7 +828,7 @@ const ListCourses = ({ basePath, customPermissions }) => {
         pagination={{
           ...pagination,
           showSizeChanger: true,
-          pageSizeOptions: ["5", "10", "20", "50", "100"],
+          pageSizeOptions: ["10", "20", "50", "100"],
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} courses`,
         }}

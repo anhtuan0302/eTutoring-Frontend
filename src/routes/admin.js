@@ -1,6 +1,5 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import { Helmet } from "react-helmet";
 import Dashboard from "../pages/admin/dashboard";
 import NotFoundPage from "../pages/notFound";
 
@@ -12,7 +11,7 @@ import { ListStaffsPage } from "../pages/admin/organization/staff";
 import { ListStudentsPage, CreatePendingStudentPage } from "../pages/admin/organization/student";
 import { ListTutorsPage } from "../pages/admin/organization/tutor";
 
-import { ListCoursesPage } from "../pages/admin/education/course";
+import { ListCoursesPage, CreateCoursePage, UpdateCoursePage, CourseDetailPage } from "../pages/admin/education/course";
 
 import { MessagePage } from "../pages/admin/communication/message";
 
@@ -36,7 +35,11 @@ const AdminRoutes = () => {
             <Route path="pendingUser" element={<ListPendingUsersPage />} />
             <Route path="pendingUser/create" element={<CreatePendingUserPage />} />
             <Route path="pendingUser/:id" element={<DetailPendingUserPage />} />
+
             <Route path="course" element={<ListCoursesPage />} />
+            <Route path="course/create" element={<CreateCoursePage />} />
+            <Route path="course/:id" element={<CourseDetailPage />} />
+            <Route path="course/:id/edit" element={<UpdateCoursePage />} />
 
             <Route path="message" element={<MessagePage />} />
 
