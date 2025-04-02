@@ -1,5 +1,4 @@
 import React from "react";
-import { Helmet } from "react-helmet";
 import AdminLayout from "../../../components/layouts/admin/layout";
 import ListPendingUsers from "../../../components/common/auth/pendingUser/list";
 import CreatePendingUser from "../../../components/common/auth/pendingUser/create";

@@ -113,7 +113,7 @@ const getMenuItems = () => {
         {
           key: "class",
           label: "Class",
-          path: "/admin/class",
+          path: "/admin/classInfo",
         },
         {
           key: "classTutor",
