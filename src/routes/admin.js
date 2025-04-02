@@ -1,10 +1,10 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-
+import { Helmet } from "react-helmet";
 import Dashboard from "../pages/admin/dashboard";
 import NotFoundPage from "../pages/notFound";
 
-import { ListPendingUsersPage, CreatePendingUserPage } from "../pages/admin/auth/pendingUser";
+import { ListPendingUsersPage, CreatePendingUserPage, DetailPendingUserPage } from "../pages/admin/auth/pendingUser";
 
 import { ListDepartmentsPage, CreateDepartmentPage, UpdateDepartmentPage, DetailDepartmentPage } from "../pages/admin/organization/department";
 
@@ -35,7 +35,7 @@ const AdminRoutes = () => {
             
             <Route path="pendingUser" element={<ListPendingUsersPage />} />
             <Route path="pendingUser/create" element={<CreatePendingUserPage />} />
-
+            <Route path="pendingUser/:id" element={<DetailPendingUserPage />} />
             <Route path="course" element={<ListCoursesPage />} />
 
             <Route path="message" element={<MessagePage />} />

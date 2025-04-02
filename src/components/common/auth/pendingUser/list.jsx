@@ -25,8 +25,9 @@ import { getAllDepartments } from "../../../../api/organization/department";
 import {
   SearchOutlined,
   DeleteOutlined,
+  RedoOutlined,
   FilterOutlined,
-  MailOutlined,
+  EyeOutlined,
   UserAddOutlined,
   DownloadOutlined,
   UploadOutlined,
@@ -289,6 +290,18 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
         render: (_, record) => record.department_id?.name || "-",
       },
       {
+        title: "Status",
+        key: "status",
+        render: (_, record) => {
+          const isExpired = new Date(record.invitation_expires_at) < new Date();
+          return (
+            <Tag color={isExpired ? "red" : "green"}>
+              {isExpired ? "Expired" : "Active"}
+            </Tag>
+          );
+        },
+      },
+      {
         title: "Expires At",
         dataIndex: "invitation_expires_at",
         key: "invitation_expires_at",
@@ -298,20 +311,37 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
       },
     ];
 
-    if (permissions.canCancel || permissions.canResend) {
+    if (permissions.canView || permissions.canCancel || permissions.canResend) {
       baseColumns.push({
         title: "Actions",
         key: "actions",
+        width: 120,
         render: (_, record) => (
-          <Space>
-            {permissions.canResend && (
+          <Space size="small">
+            {permissions.canView && (
               <Button
-                type="primary"
-                icon={<MailOutlined />}
-                onClick={() => handleResend(record._id)}
+                type="default"   
+                icon={<EyeOutlined />}
+                size="small"
+                onClick={() =>
+                  navigate(`${effectiveBasePath}/pendingUser/${record._id}`)
+                }
+              />
+            )}
+            {permissions.canResend && (
+              <Popconfirm
+                title="Are you sure you want to resend this invitation?"
+                onConfirm={() => handleResend(record._id)}
+                okText="Yes"
+                cancelText="No"
               >
-                Resend
-              </Button>
+                <Button
+                  type="primary"
+                  icon={<RedoOutlined />}
+                  size="small"
+                  style={{ backgroundColor: "#faad14" }}
+                />
+              </Popconfirm>
             )}
             {permissions.canCancel && (
               <Popconfirm
@@ -320,9 +350,12 @@ const ListPendingUsers = ({ basePath, customPermissions }) => {
                 okText="Yes"
                 cancelText="No"
               >
-                <Button type="link" danger>
-                  Cancel
-                </Button>
+                <Button
+                  type="primary"
+                  icon={<DeleteOutlined />}
+                  size="small"
+                  danger
+                />
               </Popconfirm>
             )}
           </Space>

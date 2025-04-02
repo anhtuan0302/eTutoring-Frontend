@@ -30,6 +30,10 @@ export const getPendingUsers = () => {
   return api.get('/pendingUser');
 };
 
+export const getPendingUserById = (id) => {
+  return api.get(`/pendingUser/${id}`);
+};
+
 export const cancelInvitation = (id) => {
   return api.delete(`/pendingUser/${id}`);
 };

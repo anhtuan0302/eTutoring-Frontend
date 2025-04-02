@@ -598,7 +598,7 @@ const ListDepartments = ({
       },
     ];
 
-    if (permissions.canEdit || permissions.canView) {
+    if (permissions.canEdit || permissions.canView || permissions.canDelete) {
       baseColumns.push({
         title: "Actions",
         key: "actions",
