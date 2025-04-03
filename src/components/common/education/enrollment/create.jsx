@@ -3,7 +3,7 @@ import { Form, Button, message, Modal, Select, Row, Col } from "antd";
 import { RollbackOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
-import { enrollStudent } from "../../../../api/education/enrollment";
+import { enrollStudent, getStudentsByClass } from "../../../../api/education/enrollment";
 import { getAllClasses } from "../../../../api/education/classInfo";
 import { getAllStudents } from "../../../../api/organization/student";
 import { useEffect } from "react";
@@ -18,6 +18,7 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
   const [students, setStudents] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [enrolledStudents, setEnrolledStudents] = useState({});
 
   // Xác định basePath dựa theo role
   const effectiveBasePath = useMemo(() => {
@@ -56,7 +57,7 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
       try {
         const [classesData, studentsData] = await Promise.all([
           getAllClasses(),
-          getAllStudents()
+          getAllStudents(),
         ]);
         setClasses(classesData);
         setStudents(studentsData);
@@ -79,13 +80,43 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      await enrollStudent(values);
-      message.success("Student enrolled successfully!");
+      const studentIds = values.student_ids || [];
+      
+      // Kiểm tra học sinh đã enrolled
+      const alreadyEnrolledStudents = studentIds.filter(id => enrolledStudents[id]);
+      
+      if (alreadyEnrolledStudents.length > 0) {
+        // Tìm tên của các học sinh đã enrolled
+        const enrolledNames = alreadyEnrolledStudents
+          .map(id => {
+            const student = students.find(s => s._id === id);
+            return `${student.student_code} - ${student.user_id?.first_name} ${student.user_id?.last_name}`;
+          })
+          .join('\n');
+  
+        setErrorMessage(
+          `The following students are already enrolled in this class:\n${enrolledNames}`
+        );
+        setIsModalVisible(true);
+        setLoading(false);
+        return;
+      }
+  
+      // Nếu không có học sinh nào đã enrolled, tiến hành enroll
+      const enrollmentPromises = studentIds.map(studentId => 
+        enrollStudent({
+          classInfo_id: values.classInfo_id,
+          student_id: studentId
+        })
+      );
+  
+      await Promise.all(enrollmentPromises);
+      message.success("Students enrolled successfully!");
       setTimeout(() => {
         navigate(`${effectiveBasePath}/enrollment`);
       }, 1000);
     } catch (error) {
-      const apiError = error.response?.data?.error || "Failed to enroll student";
+      const apiError = error.response?.data?.error || "Failed to enroll students";
       setErrorMessage(apiError);
       setIsModalVisible(true);
     } finally {
@@ -93,9 +124,31 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
     }
   };
 
+  const handleClassChange = async (classId) => {
+    try {
+      const enrolledData = await getStudentsByClass(classId);
+      const enrolledMap = {};
+      enrolledData.forEach(enrollment => {
+        // Giả sử response trả về có dạng { student_id: "..." }
+        enrolledMap[enrollment.student_id] = true;
+      });
+      setEnrolledStudents(enrolledMap);
+    } catch (error) {
+      console.error("Failed to fetch enrolled students:", error);
+      message.error("Failed to load enrolled students");
+    }
+  };
+  
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div
+        style={{
+          marginBottom: 16,
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
         <Button
           icon={<RollbackOutlined />}
           onClick={() => navigate(`${effectiveBasePath}/enrollment`)}
@@ -103,12 +156,8 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
           Back to List
         </Button>
       </div>
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={onFinish}
-      >
-        <Row gutter={16}>
+      <Form form={form} layout="vertical" onFinish={onFinish}>
+      <Row gutter={16}>
           <Col span={12}>
             <Form.Item
               label="Class"
@@ -123,23 +172,30 @@ const CreateEnrollment = ({ basePath, customPermissions }) => {
                 }))}
                 showSearch
                 optionFilterProp="label"
+                onChange={handleClassChange}
               />
             </Form.Item>
           </Col>
           <Col span={12}>
             <Form.Item
-              label="Student"
-              name="student_id"
-              rules={[{ required: true, message: "Please select a student!" }]}
+              label="Students"
+              name="student_ids"
+              rules={[{ required: true, message: "Please select at least one student!" }]}
             >
               <Select
-                placeholder="Select a student"
+                mode="multiple"
+                placeholder="Select students"
                 options={students.map(student => ({
                   value: student._id,
-                  label: `${student.student_code} - ${student.user_id?.first_name} ${student.user_id?.last_name}`
+                  label: `${student.student_code} - ${student.user_id?.first_name} ${student.user_id?.last_name}`,
+                  disabled: enrolledStudents[student._id] // Disable các học sinh đã enrolled
                 }))}
                 showSearch
                 optionFilterProp="label"
+                filterOption={(input, option) =>
+                  option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0
+                }
+                style={{ width: '100%' }}
               />
             </Form.Item>
           </Col>

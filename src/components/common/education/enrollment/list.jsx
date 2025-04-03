@@ -11,6 +11,7 @@ import {
   Upload,
   Modal,
   Select,
+  Progress,
 } from "antd";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
@@ -20,12 +21,12 @@ import {
   unenrollStudent,
 } from "../../../../api/education/enrollment";
 import { getAllClasses } from "../../../../api/education/classInfo";
+import { getAllStudents } from "../../../../api/organization/student";
 import {
   SearchOutlined,
   DeleteOutlined,
   DownloadOutlined,
   UploadOutlined,
-  EyeOutlined,
   StarOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
@@ -49,6 +50,8 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importResults, setImportResults] = useState(null);
   const [isImportGuideVisible, setIsImportGuideVisible] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Xác định basePath dựa theo role
   const effectiveBasePath = useMemo(() => {
@@ -108,99 +111,117 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
 
   const fetchData = useCallback(async () => {
     try {
-        setLoading(true);
-        console.log("Starting fetchData in ListEnrollments");
-  
-        // Lấy classes
-        const classesData = await getAllClasses();
-        console.log("Raw classes data:", classesData);
-  
-        if (!Array.isArray(classesData) || classesData.length === 0) {
-            console.log("No classes found or invalid data");
-            setClasses([]);
-            setEnrollments([]);
-            return;
-        }
-  
-        setClasses(classesData);
-  
-        if (selectedClass) {
-            console.log("Fetching enrollments for selected class:", selectedClass);
-            const response = await getStudentsByClass(selectedClass);
-            const enrollmentsData = Array.isArray(response) ? response : response.data || [];
-            console.log("Enrollments for selected class:", enrollmentsData);
-            setEnrollments(enrollmentsData);
-            setPagination((prev) => ({
-                ...prev,
-                total: enrollmentsData.length,
-            }));
-        } else {
-            console.log("Fetching enrollments for all classes");
-            
-            // Sử dụng Promise.all để xử lý song song các request
-            const enrollmentPromises = classesData.map(cls => 
-                getStudentsByClass(cls._id)
-            );
-  
-            const results = await Promise.all(enrollmentPromises);
-            console.log("Raw enrollment results:", results);
-            
-            // Thu thập tất cả enrollment
-            let allEnrollments = [];
-            results.forEach(classEnrollments => {
-                // Xử lý cả trường hợp response trực tiếp là array hoặc response.data là array
-                const enrollmentsArray = Array.isArray(classEnrollments) ? 
-                    classEnrollments : 
-                    (classEnrollments && Array.isArray(classEnrollments.data) ? classEnrollments.data : []);
-                
-                if (enrollmentsArray.length > 0) {
-                    allEnrollments = [...allEnrollments, ...enrollmentsArray];
-                }
-            });
-            
-            console.log("All enrollments collected:", allEnrollments);
-  
-            // Lọc ra các enrollment có dữ liệu hợp lệ
-            const validEnrollments = allEnrollments.filter(
-                (enrollment) =>
-                    enrollment &&
-                    enrollment._id &&
-                    enrollment.student_id &&
-                    enrollment.classInfo_id
-            );
-  
-            console.log("Valid enrollments:", validEnrollments);
-            setEnrollments(validEnrollments);
-            setAllEnrollments(validEnrollments);
-            setPagination((prev) => ({
-                ...prev,
-                total: validEnrollments.length,
-            }));
-        }
-    } catch (error) {
-        console.error("Error in fetchData:", error);
-        message.error("Failed to load data");
+      setLoading(true);
+
+      // Lấy classes
+      const classesData = await getAllClasses();
+
+      if (!Array.isArray(classesData) || classesData.length === 0) {
+        setClasses([]);
         setEnrollments([]);
+        return;
+      }
+
+      setClasses(classesData);
+
+      if (selectedClass) {
+        const response = await getStudentsByClass(selectedClass);
+        const enrollmentsData = Array.isArray(response)
+          ? response
+          : response.data || [];
+        setEnrollments(enrollmentsData);
+        setAllEnrollments(enrollmentsData);
+        setPagination((prev) => ({
+          ...prev,
+          total: enrollmentsData.length,
+        }));
+      } else {
+        // Sử dụng Promise.all để xử lý song song các request
+        const enrollmentPromises = classesData.map((cls) =>
+          getStudentsByClass(cls._id)
+        );
+
+        const results = await Promise.all(enrollmentPromises);
+
+        // Thu thập tất cả enrollment
+        let allEnrollments = [];
+        results.forEach((classEnrollments) => {
+          // Xử lý cả trường hợp response trực tiếp là array hoặc response.data là array
+          const enrollmentsArray = Array.isArray(classEnrollments)
+            ? classEnrollments
+            : classEnrollments && Array.isArray(classEnrollments.data)
+            ? classEnrollments.data
+            : [];
+
+          if (enrollmentsArray.length > 0) {
+            allEnrollments = [...allEnrollments, ...enrollmentsArray];
+          }
+        });
+
+        // Lọc ra các enrollment có dữ liệu hợp lệ
+        const validEnrollments = allEnrollments.filter(
+          (enrollment) =>
+            enrollment &&
+            enrollment._id &&
+            enrollment.student_id &&
+            enrollment.classInfo_id
+        );
+
+        setEnrollments(validEnrollments);
+        setAllEnrollments(validEnrollments);
+        setPagination((prev) => ({
+          ...prev,
+          total: validEnrollments.length,
+        }));
+      }
+    } catch (error) {
+      console.error("Error in fetchData:", error);
+      message.error("Failed to load data");
+      setEnrollments([]);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   }, [selectedClass]);
 
-  // Thêm useEffect để theo dõi classes state
   useEffect(() => {
-    console.log("Classes state updated:", classes);
-  }, [classes]);
+    const handleBeforeUnload = (e) => {
+      if (isUploading) {
+        e.preventDefault();
+        e.returnValue =
+          "Data is currently being uploaded. Are you sure you want to leave the page?";
+        return e.returnValue;
+      }
+    };
 
-  // Thêm effect để debug
-  useEffect(() => {
-    console.log("Current enrollments state:", enrollments);
-  }, [enrollments]);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isUploading]);
 
   // Kích hoạt fetchData khi component mount hoặc selectedClass thay đổi
   useEffect(() => {
     fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchData]);
+  }, [fetchData, selectedClass]);
+
+  const UploadProgressModal = useCallback(() => {
+    return (
+      <Modal
+        title="Uploading Data"
+        open={isUploading}
+        closable={false}
+        footer={null}
+        maskClosable={false}
+        width={400}
+      >
+        <div>
+          <div style={{ marginBottom: 16 }}>
+            Please do not close or refresh the page while data is being
+            uploaded...
+          </div>
+          <Progress percent={Math.round(uploadProgress)} status="active" />
+        </div>
+      </Modal>
+    );
+  }, [isUploading, uploadProgress]);
 
   const handleDelete = useCallback(
     async (id) => {
@@ -220,6 +241,11 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
   const handleClassChange = (value) => {
     setSelectedClass(value);
     setSelectedRowKeys([]);
+    setPagination({
+      current: 1,
+      pageSize: 10,
+      total: 0,
+    });
   };
 
   const handleDeleteMultiple = useCallback(async () => {
@@ -301,17 +327,50 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
               <ul style={{ marginTop: "10px" }}>
                 <li>
                   <strong>StudentId</strong>: Required, must match existing
-                  student ID
+                  student ID code (e.g. "STU001")
                 </li>
                 <li>
                   <strong>ClassCode</strong>: Required, must match existing
-                  class code
+                  class code (e.g. "CS101-A")
                 </li>
               </ul>
             </li>
             <li>Save the file in Excel format (.xlsx or .xls)</li>
             <li>Click "I Understand" to proceed with import</li>
           </ol>
+        </div>
+        
+        <div
+          style={{
+            marginTop: "20px",
+            backgroundColor: "#f5f5f5",
+            padding: "15px",
+            borderRadius: "5px",
+          }}
+        >
+          <h4>Sample Data Format:</h4>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  StudentId
+                </th>
+                <th style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  ClassCode
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  STU001
+                </td>
+                <td style={{ border: "1px solid #ddd", padding: "8px" }}>
+                  CS101-A
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </Modal>
     );
@@ -345,43 +404,6 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
     [classes]
   );
 
-  const processImportData = useCallback(
-    async (data) => {
-      const results = {
-        successCount: 0,
-        errorCount: 0,
-        errors: [],
-      };
-
-      const classCodeMap = new Map(classes.map((c) => [c.code, c._id]));
-
-      for (const [index, row] of data.entries()) {
-        try {
-          const classInfo_id = classCodeMap.get(row["ClassCode"]);
-
-          await enrollStudent({
-            classInfo_id,
-            student_id: row["StudentId"],
-          });
-
-          results.successCount++;
-        } catch (error) {
-          results.errorCount++;
-          results.errors.push({
-            row: index + 2,
-            studentId: row["StudentId"],
-            classCode: row["ClassCode"],
-            error: error.response?.data?.error || error.message,
-          });
-        }
-      }
-
-      return results;
-    },
-    [classes]
-  );
-
-  // Các hàm xử lý import/export giữ nguyên như classInfo
   const readExcelFile = useCallback((file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -404,45 +426,165 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
   const handleImport = useCallback(
     async (info) => {
       const { file } = info;
+      
+      if (!file) {
+        message.error("No file selected");
+        return;
+      }
+      
       setImportLoading(true);
+      setIsUploading(true);
+      setUploadProgress(0);
 
       try {
+        console.log("Reading file...");
+        // Read and validate the Excel file
         const data = await readExcelFile(file);
+        
+        if (!data || data.length === 0) {
+          message.error("The uploaded file contains no data");
+          setImportLoading(false);
+          setIsUploading(false);
+          return;
+        }
+        
+        console.log("Validating data...", data);
         const validationResult = validateImportData(data);
 
         if (validationResult.hasErrors) {
-          message.error({
+          Modal.error({
+            title: "Validation Errors",
             content: (
               <div>
-                <h4>Import errors:</h4>
-                <ul>
-                  {validationResult.errors.map((error, i) => (
-                    <li key={i}>{error}</li>
+                <div>Please fix the following errors:</div>
+                <ul
+                  style={{
+                    maxHeight: "300px",
+                    overflowY: "auto",
+                    marginTop: "10px",
+                  }}
+                >
+                  {validationResult.errors.map((error, index) => (
+                    <li key={index} style={{ color: "#ff4d4f" }}>
+                      {error}
+                    </li>
                   ))}
                 </ul>
               </div>
             ),
-            duration: 10,
+            width: 500,
           });
+          setImportLoading(false);
+          setIsUploading(false);
           return;
         }
 
-        const results = await processImportData(data);
+        // Create class code map for lookup
+        const classCodeMap = new Map(classes.map((c) => [c.code, c._id]));
+
+        // Fetch students once instead of in each loop iteration
+        console.log("Fetching students...");
+        const studentsResponse = await getAllStudents();
+        
+        if (!studentsResponse || !studentsResponse.data) {
+          throw new Error("Failed to load student data");
+        }
+        
+        const students = Array.isArray(studentsResponse.data)
+          ? studentsResponse.data
+          : [];
+        
+        console.log(`Got ${students.length} students`);
+
+        if (students.length === 0) {
+          throw new Error("No students found in the system");
+        }
+
+        // Create student code map for lookup
+        const studentCodeMap = new Map();
+        students.forEach(student => {
+          if (student && student.student_code) {
+            studentCodeMap.set(student.student_code, student._id);
+          }
+        });
+        
+        console.log(`Created mapping for ${studentCodeMap.size} students`);
+
+        const results = {
+          successCount: 0,
+          errorCount: 0,
+          errors: [],
+        };
+
+        // Calculate progress step for each item
+        const progressStep = 100 / data.length;
+
+        // Process each row
+        console.log("Starting to process rows...");
+        for (const [index, row] of data.entries()) {
+          try {
+            const classCode = row["ClassCode"];
+            const studentCode = row["StudentId"];
+            
+            console.log(`Processing row ${index + 1}: Student ${studentCode}, Class ${classCode}`);
+            
+            const classInfo_id = classCodeMap.get(classCode);
+            if (!classInfo_id) {
+              throw new Error(`Class with code ${classCode} not found`);
+            }
+            
+            const student_id = studentCodeMap.get(studentCode);
+            if (!student_id) {
+              throw new Error(`Student with code ${studentCode} not found`);
+            }
+
+            console.log(`Enrolling student ${student_id} in class ${classInfo_id}`);
+            
+            const response = await enrollStudent({
+              classInfo_id,
+              student_id,
+            });
+            
+            console.log("Enrollment response:", response);
+
+            results.successCount++;
+            setUploadProgress(Math.min(100, Math.round((index + 1) * progressStep)));
+          } catch (error) {
+            console.error("Error processing row:", error);
+            results.errorCount++;
+            results.errors.push({
+              row: index + 2,
+              studentId: row["StudentId"],
+              classCode: row["ClassCode"],
+              error: error.response?.data?.error || error.message,
+            });
+          }
+        }
+
+        console.log("Import completed:", results);
         setImportResults(results);
         setImportModalVisible(true);
-        message.success(
-          `Imported ${results.successCount} enrollments successfully`
-        );
-        fetchData();
+        
+        if (results.successCount > 0) {
+          message.success(`Imported ${results.successCount} enrollments successfully`);
+          fetchData();
+        }
       } catch (error) {
         console.error("Import error:", error);
         message.error(`Import failed: ${error.message}`);
       } finally {
         setImportLoading(false);
+        setIsUploading(false);
+        setUploadProgress(0);
       }
     },
-    [fetchData, processImportData, readExcelFile, validateImportData]
+    [classes, fetchData, readExcelFile, validateImportData]
   );
+
+  // Handle pagination change
+  const handleTableChange = useCallback((newPagination) => {
+    setPagination(newPagination);
+  }, []);
 
   const filteredEnrollments = useMemo(() => {
     if (!enrollments) return [];
@@ -465,6 +607,15 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
 
     return result;
   }, [enrollments, searchText]);
+
+  // Apply client-side pagination
+  const paginatedEnrollments = useMemo(() => {
+    const { current, pageSize } = pagination;
+    const startIndex = (current - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    
+    return filteredEnrollments.slice(startIndex, endIndex);
+  }, [filteredEnrollments, pagination]);
 
   const exportToExcel = useCallback(() => {
     const dataToExport = filteredEnrollments.map((enrollment) => ({
@@ -494,9 +645,7 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
         title: "Student",
         key: "student",
         render: (_, record) => {
-          console.log("Rendering student record:", record);
           if (!record.student_id?.user_id) {
-            console.warn("Missing student data:", record);
             return <span>Invalid student data</span>;
           }
           return (
@@ -640,7 +789,13 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
             value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
+            onChange={(e) => {
+              setSearchText(e.target.value);
+              setPagination({
+                ...pagination,
+                current: 1 // Reset to first page on search
+              });
+            }}
             allowClear
           />
 
@@ -649,6 +804,7 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
               <Button
                 icon={<UploadOutlined />}
                 onClick={() => setIsImportGuideVisible(true)}
+                loading={importLoading}
               >
                 Import Excel
               </Button>
@@ -667,7 +823,11 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
           )}
 
           {permissions.canExport && (
-            <Button icon={<DownloadOutlined />} onClick={exportToExcel}>
+            <Button 
+              icon={<DownloadOutlined />} 
+              onClick={exportToExcel}
+              disabled={filteredEnrollments.length === 0}
+            >
               Export Excel
             </Button>
           )}
@@ -691,11 +851,13 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
         }
         pagination={{
           ...pagination,
+          total: filteredEnrollments.length,
           showSizeChanger: true,
           pageSizeOptions: ["10", "20", "50", "100"],
           showTotal: (total, range) =>
             `${range[0]}-${range[1]} of ${total} enrollments`,
         }}
+        onChange={handleTableChange}
         locale={{
           emptyText: (
             <Empty
@@ -710,9 +872,10 @@ const ListEnrollments = ({ basePath, customPermissions }) => {
           ),
         }}
       />
-
+      
+      <UploadProgressModal />
       <ImportGuideModal />
-
+      
       {importModalVisible && (
         <Modal
           title="Import Results"
