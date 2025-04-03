@@ -142,22 +142,13 @@ const CreateClass = ({
           onFinish={onFinish}
         >
           <Row gutter={16}>
-            <Col span={12}>
+            <Col span={24}>
               <Form.Item
                 label="Class Code"
                 name="code"
                 rules={[{ required: true, message: "Please enter class code!" }]}
               >
                 <Input placeholder="Enter the class code" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Class Name"
-                name="name"
-                rules={[{ required: true, message: "Please enter class name!" }]}
-              >
-                <Input placeholder="Enter the class name" />
               </Form.Item>
             </Col>
           </Row>
