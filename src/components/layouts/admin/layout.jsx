@@ -35,6 +35,7 @@ import {
   BellOutlined,
   DownOutlined,
   LogoutOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 
 import { useAuth } from "../../../AuthContext";
@@ -63,14 +64,20 @@ const getMenuItems = () => {
       path: "/admin/dashboard",
     },
     {
+      key: "calendar",
+      icon: <CalendarOutlined />,
+      label: "Calendar",
+      path: "/admin/classSchedule",
+    },
+    {
       key: "pending-user",
-      icon: <UsergroupAddOutlined />,
+      icon: <UserOutlined/>,
       label: "Pending Users",
       path: "/admin/pendingUser",
     },
     {
       key: "all-user",
-      icon: <UserOutlined />,
+      icon: <UsergroupAddOutlined />,
       label: "All Users",
       children: [
         {
@@ -114,16 +121,6 @@ const getMenuItems = () => {
           key: "class",
           label: "Class",
           path: "/admin/classInfo",
-        },
-        {
-          key: "classTutor",
-          label: "Class Tutor",
-          path: "/admin/classTutor",
-        },
-        {
-          key: "enrollment",
-          label: "Enrollment",
-          path: "/admin/enrollment",
         },
       ],
     },

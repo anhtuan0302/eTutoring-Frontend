@@ -13,6 +13,7 @@ import { ListTutorsPage } from "../pages/admin/organization/tutor";
 
 import { ListCoursesPage, CreateCoursePage, UpdateCoursePage, CourseDetailPage } from "../pages/admin/education/course";
 import { ListClassesPage, CreateClassPage, DetailClassPage, UpdateClassPage } from "../pages/admin/education/classInfo";
+import { ListClassSchedulesPage } from "../pages/admin/education/classSchedule";
 import { ListEnrollmentsPage, CreateEnrollmentPage, DetailEnrollmentPage, UpdateEnrollmentPage } from "../pages/admin/education/enrollment";
 import { ListClassTutorsPage, CreateClassTutorPage } from "../pages/admin/education/classTutor";
 import { MessagePage } from "../pages/admin/communication/message";
@@ -47,6 +48,8 @@ const AdminRoutes = () => {
             <Route path="classInfo/create" element={<CreateClassPage />} />
             <Route path="classInfo/:id" element={<DetailClassPage />} />
             <Route path="classInfo/:id/edit" element={<UpdateClassPage />} />
+
+            <Route path="classSchedule" element={<ListClassSchedulesPage />} />
 
             <Route path="classTutor" element={<ListClassTutorsPage />} />
             <Route path="classTutor/create" element={<CreateClassTutorPage />} />
