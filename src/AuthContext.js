@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { getCurrentUser, login as loginApi, logout as logoutApi } from './api/auth/user';
+import { initializeFirebaseAuth } from './api/config';
 
 const AuthContext = createContext(null);
 
@@ -41,12 +42,30 @@ export const AuthProvider = ({ children }) => {
       if (credentials.remember) {
         localStorage.setItem('remember', 'true');
       }
+      
+      // Đảm bảo xác thực Firebase trước khi set user
+      await initializeFirebaseAuth();
       setUser(response.user);
       return response.user;
     } catch (error) {
+      console.error('Login error:', error);
       throw error;
     }
   };
+  
+  // Thêm useEffect để xác thực Firebase khi refresh page
+  useEffect(() => {
+    const initFirebase = async () => {
+      if (user) {
+        try {
+          await initializeFirebaseAuth();
+        } catch (error) {
+          console.error('Firebase auth failed:', error);
+        }
+      }
+    };
+    initFirebase();
+  }, [user]);
 
   const logout = async () => {
     setLoading(true);
@@ -55,7 +74,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       localStorage.clear();
       setUser(null);
-      setAccessToken(null); // Thêm dòng này để reset accessToken
+      setAccessToken(null);
       setLoading(false);
     }
   };

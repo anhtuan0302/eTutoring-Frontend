@@ -725,6 +725,11 @@ const ListClasses = ({ basePath, customPermissions }) => {
   const columns = useMemo(() => {
     const baseColumns = [
       {
+        title: "No.",
+        key: "no",
+        render: (_, record, index) => index + 1,
+      },
+      {
         title: "Class Code",
         dataIndex: "code",
         key: "code",

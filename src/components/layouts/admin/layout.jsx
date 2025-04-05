@@ -36,6 +36,7 @@ import {
   DownOutlined,
   LogoutOutlined,
   CalendarOutlined,
+  ContactsOutlined,
 } from "@ant-design/icons";
 
 import { useAuth } from "../../../AuthContext";
@@ -108,32 +109,22 @@ const getMenuItems = () => {
       ],
     },
     {
+      key: "classes",
+      icon: <ContactsOutlined />,
+      label: "Classes",
+      path: "/admin/classInfo",
+    },
+    {
       key: "courses",
       icon: <BookOutlined />,
-      label: "Course Management",
-      children: [
-        {
-          key: "course",
-          label: "Course",
-          path: "/admin/course",
-        },
-        {
-          key: "class",
-          label: "Class",
-          path: "/admin/classInfo",
-        },
-      ],
+      label: "Courses",
+      path: "/admin/course",
     },
     {
       key: "learning",
       icon: <ReadOutlined />,
       label: "Learning",
       children: [
-        {
-          key: "classSchedule",
-          label: "Class Schedule",
-          path: "/admin/classSchedule",
-        },
         {
           key: "classContent",
           label: "Class Content",

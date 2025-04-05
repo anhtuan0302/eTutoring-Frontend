@@ -1,8 +1,17 @@
 import { api } from '../config';
 
 export const sendMessage = async (data) => {
-    return api.post('/chat/message', data);
-};
+    try {
+      const response = await api.post("/chat/message", {
+        conversation_id: data.conversation_id,
+        content: data.content,
+        firebase_message_id: data._id
+      });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
 
 export const getMessages = async (conversationId) => {
     return api.get(`/chat/message/${conversationId}`);

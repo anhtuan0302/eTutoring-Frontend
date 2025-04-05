@@ -24,7 +24,7 @@ import {
   List,
   Empty,
   Badge,
-  Image
+  Image,
 } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
@@ -168,6 +168,26 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     };
   }, [classInfo]);
 
+  // Thêm hàm tính tỷ lệ vắng mặt
+const calculateAbsentRate = useCallback((studentId) => {
+  // Lấy tổng số buổi học
+  const totalSchedules = classInfo.schedules?.length || 0;
+  if (totalSchedules === 0) return 0;
+
+  // Đếm số buổi vắng mặt
+  const absentCount = classInfo.schedules?.reduce((count, schedule) => {
+    // Tìm attendance của sinh viên trong buổi học này
+    const attendance = schedule.attendances?.find(
+      (a) => a.student_id === studentId
+    );
+    // Nếu không có attendance hoặc status là absent thì tính là vắng
+    return count + ((!attendance || attendance.status === 'absent') ? 1 : 0);
+  }, 0) || 0;
+
+  // Tính tỷ lệ phần trăm
+  return Math.round((absentCount / totalSchedules) * 100);
+}, [classInfo]);
+
   const handleUnenrollStudent = useCallback(
     async (enrollmentId) => {
       try {
@@ -257,137 +277,165 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   };
 
   const materials = useMemo(() => {
-    return classInfo?.contents?.filter(content => content.content_type === "material") || [];
+    return (
+      classInfo?.contents?.filter(
+        (content) => content.content_type === "material"
+      ) || []
+    );
   }, [classInfo]);
 
   const assignments = useMemo(() => {
-    return classInfo?.contents?.filter(content => content.content_type === "assignment") || [];
+    return (
+      classInfo?.contents?.filter(
+        (content) => content.content_type === "assignment"
+      ) || []
+    );
   }, [classInfo]);
 
-    // Hàm format dung lượng file
-    const formatFileSize = (bytes) => {
-      if (bytes === 0) return '0 Bytes';
-      const k = 1024;
-      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-      const i = Math.floor(Math.log(bytes) / Math.log(k));
-      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    };
-  
-    // Component hiển thị attachments
-    const AttachmentsList = ({ attachments }) => {
-      const [previewVisible, setPreviewVisible] = useState(false);
-      const [previewMedia, setPreviewMedia] = useState(null);
-    
-      // Hàm kiểm tra loại file
-      const getFileType = (fileName) => {
-        const extension = fileName.split('.').pop().toLowerCase();
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) return 'image';
-        if (['mp4', 'webm', 'ogg'].includes(extension)) return 'video';
-        if (['mp3', 'wav'].includes(extension)) return 'audio';
-        return 'other';
-      };
-    
-      // Hàm xử lý preview
-      const handlePreview = (attachment) => {
-        setPreviewMedia(attachment);
-        setPreviewVisible(true);
-      };
-    
-      // Component render preview content
-      const PreviewContent = ({ media }) => {
-        const fileType = getFileType(media.file_name);
-        const fileUrl = `http://localhost:8000/${media.file_path}`;
-    
-        switch (fileType) {
-          case 'image':
-            return <Image src={fileUrl} style={{ maxWidth: '100%' }} />;
-          case 'video':
-            return (
-              <video controls style={{ maxWidth: '100%' }}>
-                <source src={fileUrl} type={`video/${media.file_name.split('.').pop()}`} />
-                Your browser does not support the video tag.
-              </video>
-            );
-          case 'audio':
-            return (
-              <audio controls style={{ width: '100%' }}>
-                <source src={fileUrl} type={`audio/${media.file_name.split('.').pop()}`} />
-                Your browser does not support the audio tag.
-              </audio>
-            );
-          default:
-            return null;
-        }
-      };
-    
-      return (
-        <>
-          <List
-            size="small"
-            dataSource={attachments}
-            renderItem={attachment => {
-              const fileType = getFileType(attachment.file_name);
-              const isPreviewable = ['image', 'video', 'audio'].includes(fileType);
-    
-              return (
-                <List.Item
-                  actions={[
-                    isPreviewable && (
-                      <Button
-                        type="link"
-                        icon={fileType === 'video' ? <PlayCircleOutlined /> : <EyeOutlined />}
-                        onClick={() => handlePreview(attachment)}
-                      >
-                        Preview
-                      </Button>
-                    ),
-                    <Button
-                      type="link"
-                      icon={<DownloadOutlined />}
-                      href={`http://localhost:8000/${attachment.file_path}`}
-                      target="_blank"
-                    >
-                      Download
-                    </Button>
-                  ].filter(Boolean)}
-                >
-                  <List.Item.Meta
-                    avatar={
-                      fileType === 'image' ? (
-                        <Image
-                          src={`http://localhost:8000/${attachment.file_path}`}
-                          width={40}
-                          height={40}
-                          style={{ objectFit: 'cover' }}
-                          preview={false}
-                        />
-                      ) : (
-                        <PaperClipOutlined />
-                      )
-                    }
-                    title={attachment.file_name}
-                    description={formatFileSize(attachment.file_size)}
-                  />
-                </List.Item>
-              );
-            }}
-          />
-    
-          <Modal
-            open={previewVisible}
-            title={previewMedia?.file_name}
-            footer={null}
-            onCancel={() => setPreviewVisible(false)}
-            width={800}
-            centered
-          >
-            {previewMedia && <PreviewContent media={previewMedia} />}
-          </Modal>
-        </>
-      );
+  // Hàm format dung lượng file
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  // Component hiển thị attachments
+  const AttachmentsList = ({ attachments }) => {
+    const [previewVisible, setPreviewVisible] = useState(false);
+    const [previewMedia, setPreviewMedia] = useState(null);
+
+    // Hàm kiểm tra loại file
+    const getFileType = (fileName) => {
+      const extension = fileName.split(".").pop().toLowerCase();
+      if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension))
+        return "image";
+      if (["mp4", "webm", "ogg"].includes(extension)) return "video";
+      if (["mp3", "wav"].includes(extension)) return "audio";
+      return "other";
     };
 
+    // Hàm xử lý preview
+    const handlePreview = (attachment) => {
+      setPreviewMedia(attachment);
+      setPreviewVisible(true);
+    };
+
+    // Component render preview content
+    const PreviewContent = ({ media }) => {
+      const fileType = getFileType(media.file_name);
+      const fileUrl = `http://localhost:8000/${media.file_path}`;
+
+      switch (fileType) {
+        case "image":
+          return <Image src={fileUrl} style={{ maxWidth: "100%" }} />;
+        case "video":
+          return (
+            <video controls style={{ maxWidth: "100%" }}>
+              <source
+                src={fileUrl}
+                type={`video/${media.file_name.split(".").pop()}`}
+              />
+              Your browser does not support the video tag.
+            </video>
+          );
+        case "audio":
+          return (
+            <audio controls style={{ width: "100%" }}>
+              <source
+                src={fileUrl}
+                type={`audio/${media.file_name.split(".").pop()}`}
+              />
+              Your browser does not support the audio tag.
+            </audio>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <>
+        <List
+          size="small"
+          dataSource={attachments}
+          renderItem={(attachment) => {
+            const fileType = getFileType(attachment.file_name);
+            const isPreviewable = ["image", "video", "audio"].includes(
+              fileType
+            );
+
+            return (
+              <List.Item
+                actions={[
+                  isPreviewable && (
+                    <Button
+                      type="link"
+                      icon={
+                        fileType === "video" ? (
+                          <PlayCircleOutlined />
+                        ) : (
+                          <EyeOutlined />
+                        )
+                      }
+                      onClick={() => handlePreview(attachment)}
+                    >
+                      Preview
+                    </Button>
+                  ),
+                  <Button
+                    type="link"
+                    icon={<DownloadOutlined />}
+                    href={`http://localhost:8000/${attachment.file_path}`}
+                    target="_blank"
+                  >
+                    Download
+                  </Button>,
+                ].filter(Boolean)}
+              >
+                <List.Item.Meta
+                  avatar={
+                    fileType === "image" ? (
+                      <Image
+                        src={`http://localhost:8000/${attachment.file_path}`}
+                        width={40}
+                        height={40}
+                        style={{ objectFit: "cover" }}
+                        preview={false}
+                      />
+                    ) : (
+                      <PaperClipOutlined />
+                    )
+                  }
+                  title={attachment.file_name}
+                  description={formatFileSize(attachment.file_size)}
+                />
+              </List.Item>
+            );
+          }}
+        />
+
+        <Modal
+          open={previewVisible}
+          title={previewMedia?.file_name}
+          footer={null}
+          onCancel={() => setPreviewVisible(false)}
+          width={800}
+          centered
+        >
+          {previewMedia && <PreviewContent media={previewMedia} />}
+        </Modal>
+      </>
+    );
+  };
+
   const studentColumns = [
+    {
+      title: "No.",
+      key: "no",
+      render: (_, record, index) => index + 1,
+    },
     {
       title: "Student",
       key: "student",
@@ -424,11 +472,28 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     {
       title: "Status",
       key: "status",
-      render: (_, record) => (
-        <Tag color={record.status === "active" ? "green" : "red"}>
-          {record.status?.toUpperCase()}
-        </Tag>
-      ),
+      render: (_, record) => {
+        const absentRate = calculateAbsentRate(record.student_id._id);
+        let color = 'green';
+        if (absentRate > 30) {
+          color = 'red';
+        } else if (absentRate > 20) {
+          color = 'orange';
+        } else if (absentRate > 10) {
+          color = 'gold';
+        }
+  
+        return (
+          <Space direction="vertical" size={0}>
+            <Tag color={record.status === "active" ? "green" : "red"}>
+              {record.status?.toUpperCase()}
+            </Tag>
+            <Tag color={color}>
+              {absentRate}% Absent
+            </Tag>
+          </Space>
+        );
+      },
     },
     {
       title: "Grade",
@@ -606,35 +671,45 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       key: "actions",
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="Edit Schedule">
+        <Tooltip title="View Attendance">
+          <Button
+            type="default"
+            icon={<EyeOutlined />}
+            size="small"
+            onClick={() =>
+              navigate(`${effectiveBasePath}/attendance/schedule/${record._id}`)
+            }
+          />
+        </Tooltip>
+        <Tooltip title="Edit Schedule">
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            size="small"
+            style={{ backgroundColor: "#faad14" }}
+            onClick={() =>
+              navigate(
+                `${effectiveBasePath}/classInfo/${id}/schedule/${record._id}/edit`
+              )
+            }
+          />
+        </Tooltip>
+        <Tooltip title="Delete">
+          <Popconfirm
+            title="Are you sure you want to delete this schedule?"
+            onConfirm={() => handleDeleteSchedule(record._id)}
+            okText="Yes"
+            cancelText="No"
+          >
             <Button
               type="primary"
-              icon={<EditOutlined />}
+              icon={<DeleteOutlined />}
               size="small"
-              style={{ backgroundColor: "#faad14" }}
-              onClick={() =>
-                navigate(
-                  `${effectiveBasePath}/classInfo/${id}/schedule/${record._id}/edit`
-                )
-              }
+              danger
             />
-          </Tooltip>
-          <Tooltip title="Delete">
-            <Popconfirm
-              title="Are you sure you want to delete this schedule?"
-              onConfirm={() => handleDeleteSchedule(record._id)}
-              okText="Yes"
-              cancelText="No"
-            >
-              <Button
-                type="primary"
-                icon={<DeleteOutlined />}
-                size="small"
-                danger
-              />
-            </Popconfirm>
-          </Tooltip>
-        </Space>
+          </Popconfirm>
+        </Tooltip>
+      </Space>
       ),
     },
   ];
@@ -1002,6 +1077,20 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                             ? "Online"
                                             : schedule.location}
                                         </div>
+                                        <div>
+                                          {schedule.is_online && (
+                                            <div>
+                                              Online Link:{" "}
+                                              <a
+                                                href={schedule.online_link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                              >
+                                                {schedule.online_link}
+                                              </a>
+                                            </div>
+                                          )}
+                                        </div>
                                         <div>Status: {schedule.status}</div>
                                       </div>
                                     }
@@ -1027,6 +1116,13 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                         >
                                           {new Date(
                                             schedule.start_time
+                                          ).toLocaleTimeString([], {
+                                            hour: "2-digit",
+                                            minute: "2-digit",
+                                          })}{" "}
+                                          -{" "}
+                                          {new Date(
+                                            schedule.end_time
                                           ).toLocaleTimeString([], {
                                             hour: "2-digit",
                                             minute: "2-digit",
@@ -1123,29 +1219,40 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       <List
                         grid={{ gutter: 16, column: 2 }}
                         dataSource={materials}
-                        renderItem={material => (
+                        renderItem={(material) => (
                           <List.Item>
                             <Card
                               title={material.title}
                               extra={
                                 <Text type="secondary">
-                                  {new Date(material.createdAt).toLocaleTimeString().slice(0, 5) + " - " + new Date(material.createdAt).toLocaleDateString()}
+                                  {new Date(material.createdAt)
+                                    .toLocaleTimeString()
+                                    .slice(0, 5) +
+                                    " - " +
+                                    new Date(
+                                      material.createdAt
+                                    ).toLocaleDateString()}
                                 </Text>
                               }
                             >
-                              <Space direction="vertical" style={{ width: '100%' }}>
+                              <Space
+                                direction="vertical"
+                                style={{ width: "100%" }}
+                              >
                                 {material.description && (
                                   <Typography.Paragraph>
                                     {material.description}
                                   </Typography.Paragraph>
                                 )}
-                                
+
                                 {material.attachments?.length > 0 && (
                                   <div style={{ marginTop: 16 }}>
                                     <Divider orientation="left">
                                       <PaperClipOutlined /> Attachments
                                     </Divider>
-                                    <AttachmentsList attachments={material.attachments} />
+                                    <AttachmentsList
+                                      attachments={material.attachments}
+                                    />
                                   </div>
                                 )}
                               </Space>
@@ -1157,7 +1264,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       <Empty description="No materials available" />
                     )}
                   </div>
-                )
+                ),
               },
               {
                 key: "6",
@@ -1173,17 +1280,17 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       <List
                         grid={{ gutter: 16, column: 2 }}
                         dataSource={assignments}
-                        renderItem={assignment => (
+                        renderItem={(assignment) => (
                           <List.Item>
-                            <Badge.Ribbon 
+                            <Badge.Ribbon
                               text={
-                                new Date(assignment.duedate) < new Date() 
-                                  ? "Expired" 
+                                new Date(assignment.duedate) < new Date()
+                                  ? "Expired"
                                   : "Active"
                               }
                               color={
-                                new Date(assignment.duedate) < new Date() 
-                                  ? "red" 
+                                new Date(assignment.duedate) < new Date()
+                                  ? "red"
                                   : "green"
                               }
                             >
@@ -1193,24 +1300,32 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                   <Space>
                                     <ClockCircleOutlined />
                                     <Text type="secondary">
-                                      Due: {new Date(assignment.duedate).toLocaleDateString()}
+                                      Due:{" "}
+                                      {new Date(
+                                        assignment.duedate
+                                      ).toLocaleDateString()}
                                     </Text>
                                   </Space>
                                 }
                               >
-                                <Space direction="vertical" style={{ width: '100%' }}>
+                                <Space
+                                  direction="vertical"
+                                  style={{ width: "100%" }}
+                                >
                                   {assignment.description && (
                                     <Typography.Paragraph>
                                       {assignment.description}
                                     </Typography.Paragraph>
                                   )}
-          
+
                                   {assignment.attachments?.length > 0 && (
                                     <div style={{ marginTop: 16 }}>
                                       <Divider orientation="left">
                                         <PaperClipOutlined /> Attachments
                                       </Divider>
-                                      <AttachmentsList attachments={assignment.attachments} />
+                                      <AttachmentsList
+                                        attachments={assignment.attachments}
+                                      />
                                     </div>
                                   )}
                                 </Space>
@@ -1223,8 +1338,8 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       <Empty description="No assignments available" />
                     )}
                   </div>
-                )
-              }
+                ),
+              },
             ]}
           />
         </Card>
