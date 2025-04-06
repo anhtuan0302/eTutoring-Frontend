@@ -17,6 +17,8 @@ import { ListClassSchedulesPage } from "../pages/admin/education/classSchedule";
 import { ListAttendancePage } from "../pages/admin/education/attendance";
 import { ListEnrollmentsPage, CreateEnrollmentPage, DetailEnrollmentPage, UpdateEnrollmentPage } from "../pages/admin/education/enrollment";
 import { ListClassTutorsPage, CreateClassTutorPage } from "../pages/admin/education/classTutor";
+
+import { PostPage } from "../pages/admin/blog/post";
 import { MessagePage } from "../pages/admin/communication/message";
 
 const AdminRoutes = () => {
@@ -63,6 +65,7 @@ const AdminRoutes = () => {
             <Route path="enrollment/:id/edit" element={<UpdateEnrollmentPage />} />
 
             <Route path="message" element={<MessagePage />} />
+            <Route path="post" element={<PostPage />} />
 
             <Route path="*" element={<NotFoundPage />} />
         </Routes>

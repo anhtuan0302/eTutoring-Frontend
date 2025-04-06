@@ -11,6 +11,7 @@ import CompleteRegistrationPage from "./pages/completeRegistration";
 import AdminRoutes from "./routes/admin";
 import StaffRoutes from "./routes/staff";
 import TutorRoutes from "./routes/tutor";
+import StudentRoutes from "./routes/student";
 import NotFoundPage from "./pages/notFound";
 import ForbiddenPage from "./pages/forbidden";
 
@@ -92,6 +93,15 @@ const App = () => {
               }
             />
 
+            <Route
+              path="/student/*"
+              element={
+                <ProtectedRoute roles={["student"]}>
+                  <StudentRoutes />
+                </ProtectedRoute>
+              }
+            />
+            
             <Route
               path="/forbidden"
               element={

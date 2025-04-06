@@ -121,32 +121,16 @@ const getMenuItems = () => {
       path: "/admin/course",
     },
     {
-      key: "learning",
-      icon: <ReadOutlined />,
-      label: "Learning",
-      children: [
-        {
-          key: "classContent",
-          label: "Class Content",
-          path: "/admin/classContent",
-        },
-        {
-          key: "submission",
-          label: "Submission",
-          path: "/admin/submission",
-        },
-        {
-          key: "attendance",
-          label: "Attendance",
-          path: "/admin/attendance",
-        }
-      ],
-    },
-    {
       key: "post",
       icon: <FileTextOutlined />,
-      label: "Post Management",
+      label: "Posts",
       path: "/admin/post",
+    },
+    {
+      key: "message",
+      icon: <MessageOutlined />,
+      label: "Message",
+      path: "/admin/message",
     },
     {
       key: "communication",
