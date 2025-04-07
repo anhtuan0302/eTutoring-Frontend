@@ -5,6 +5,10 @@ import NotFoundPage from "../pages/notFound";
 
 import { MessagePage } from "../pages/student/communication/message";
 import { PostPage } from "../pages/student/blog/post";
+import { StudentProfilePage } from "../pages/student/auth/profile";
+
+import { ListClassesPage, DetailClassPage } from "../pages/student/education/classInfo";
+import { ClassSchedulePage } from "../pages/student/education/classSchedule";
 
 const StudentRoutes = () => {
 
@@ -12,6 +16,13 @@ const StudentRoutes = () => {
         <Routes>
             <Route path="message" element={<MessagePage />} />
             <Route path="post" element={<PostPage />} />
+            <Route path="profile" element={<StudentProfilePage />} />
+
+            <Route path="classInfo" element={<ListClassesPage />} />
+            <Route path="classInfo/:id" element={<DetailClassPage />} />
+
+            <Route path="classSchedule" element={<ClassSchedulePage />} />
+
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
     );

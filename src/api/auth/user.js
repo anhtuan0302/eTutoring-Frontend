@@ -43,6 +43,10 @@ export const getUserById = (id) => {
   return api.get(`/user/${id}`);
 };
 
-export const disableUser = (id) => {
-  return api.post(`/user/${id}/disable`);
+export const getStudentByUserId = (userId) => {
+  return api.get(`/user/student/${userId}`);
+};
+
+export const getTutorByUserId = (userId) => {
+  return api.get(`/user/tutor/${userId}`);
 };

@@ -41,6 +41,8 @@ import {
 
 import { useAuth } from "../../../AuthContext";
 
+import { staticURL } from "../../../api/config";
+
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
 
@@ -72,7 +74,7 @@ const getMenuItems = () => {
     },
     {
       key: "pending-user",
-      icon: <UserOutlined/>,
+      icon: <UserOutlined />,
       label: "Pending Users",
       path: "/admin/pendingUser",
     },
@@ -168,6 +170,8 @@ const getMenuItems = () => {
 };
 
 const AppLayout = ({ children, title }) => {
+  const { user } = useAuth();
+
   const {
     token: { borderRadiusLG },
   } = theme.useToken();
@@ -236,15 +240,10 @@ const AppLayout = ({ children, title }) => {
           onClick: handleProfileClick,
         },
         {
-          key: "2",
-          icon: <SettingOutlined />,
-          label: "Settings",
-        },
-        {
           type: "divider",
         },
         {
-          key: "3",
+          key: "2",
           icon: <LogoutOutlined />,
           label: "Logout",
           danger: true,
@@ -321,10 +320,10 @@ const AppLayout = ({ children, title }) => {
                   ),
                 },
                 {
-                  value: "Document: " + value,
+                  value: "Class: " + value,
                   label: (
                     <div>
-                      Document: <b>{value}</b>
+                      Class: <b>{value}</b>
                     </div>
                   ),
                 },
@@ -449,7 +448,7 @@ const AppLayout = ({ children, title }) => {
                   onSelect={handleSelectResult}
                   onSearch={handleSearchChange}
                   value={searchValue}
-                  placeholder="Search for courses, users, documents..."
+                  placeholder="Search for courses, users, classes..."
                   notFoundContent={
                     isSearching ? (
                       <div style={{ padding: "10px", textAlign: "center" }}>
@@ -489,7 +488,7 @@ const AppLayout = ({ children, title }) => {
               className="header-right"
               style={{ display: "flex", alignItems: "center" }}
             >
-              {/* Search button for mobile (opens a drawer/modal) */}
+              {/* Search button for mobile */}
               {isMobile && (
                 <Button
                   type="text"
@@ -499,14 +498,12 @@ const AppLayout = ({ children, title }) => {
                 />
               )}
 
-              {/* Notifications */}
-              <Badge count={5} dot={isMobile}>
-                <Button
-                  type="text"
-                  icon={<BellOutlined />}
-                  style={{ marginRight: "12px" }}
-                />
-              </Badge>
+              {/* Notifications - Sửa lại vị trí Badge */}
+              <Button type="text" style={{ marginRight: "12px" }}>
+                <Badge count={5}>
+                  <BellOutlined />
+                </Badge>
+              </Button>
 
               {/* User Account Dropdown */}
               {!isMobile && (
@@ -517,8 +514,16 @@ const AppLayout = ({ children, title }) => {
                       color: THEME_COLORS.textPrimary,
                     }}
                   >
-                    <Avatar icon={<UserOutlined />} size="small" />
-                    <span>Admin User</span>
+                    <Avatar
+                      src={
+                        user?.avatar_path
+                          ? `${staticURL}/${user.avatar_path}`
+                          : null
+                      }
+                      icon={!user?.avatar_path && <UserOutlined />}
+                      size={30}
+                    />
+                    <span>Hello, {user?.first_name}</span>
                     <DownOutlined style={{ fontSize: "12px" }} />
                   </Space>
                 </Dropdown>
@@ -591,16 +596,26 @@ const AppLayout = ({ children, title }) => {
                 }}
               >
                 <Space>
-                  <Avatar icon={<UserOutlined />} size="default" />
+                  <Avatar
+                    src={
+                      user?.avatar_path
+                        ? `${staticURL}/${user.avatar_path}`
+                        : null
+                    }
+                    icon={!user?.avatar_path && <UserOutlined />}
+                    size="default"
+                  />
                   <div>
-                    <div style={{ fontWeight: "bold" }}>Admin User</div>
+                    <div style={{ fontWeight: "bold" }}>
+                      Hello, {user?.first_name}
+                    </div>
                     <div
                       style={{
                         fontSize: "12px",
                         color: THEME_COLORS.textSecondary,
                       }}
                     >
-                      admin@example.com
+                      {user?.email}
                     </div>
                   </div>
                 </Space>
@@ -691,7 +706,7 @@ const AppLayout = ({ children, title }) => {
             <Footer
               style={{
                 textAlign: "center",
-                padding: "16px 0",
+                padding: "16px 0px 0px 0px",
                 background: THEME_COLORS.white,
                 color: THEME_COLORS.textSecondary,
                 marginTop: "20px",

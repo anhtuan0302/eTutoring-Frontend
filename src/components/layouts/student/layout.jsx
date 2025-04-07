@@ -65,16 +65,10 @@ const getMenuItems = () => {
       path: "/student/dashboard",
     },
     {
-      key: "calendar",
+      key: "timeTable",
       icon: <CalendarOutlined />,
-      label: "Calendar",
+      label: "Time Table",
       path: "/student/classSchedule",
-    },
-    {
-      key: "pending-user",
-      icon: <UserOutlined/>,
-      label: "Pending Users",
-      path: "/student/pendingUser",
     },
     {
       key: "all-user",
@@ -84,27 +78,27 @@ const getMenuItems = () => {
         {
           key: "admin",
           label: "Admin",
-          path: "/admin/admin",
+          path: "/student/admin",
         },
         {
           key: "staff",
           label: "Staff",
-          path: "/admin/staff",
+          path: "/student/staff",
         },
         {
           key: "tutor",
           label: "Tutor",
-          path: "/admin/tutor",
+          path: "/student/tutor",
         },
         {
           key: "student",
           label: "Student",
-          path: "/admin/student",
+          path: "/student/student",
         },
         {
           key: "department",
           label: "Department",
-          path: "/admin/department",
+          path: "/student/department",
         },
       ],
     },
@@ -112,13 +106,13 @@ const getMenuItems = () => {
       key: "classes",
       icon: <ContactsOutlined />,
       label: "Classes",
-      path: "/admin/classInfo",
+      path: "/student/classInfo",
     },
     {
       key: "courses",
       icon: <BookOutlined />,
       label: "Courses",
-      path: "/admin/course",
+      path: "/student/course",
     },
     {
       key: "post",
@@ -131,57 +125,6 @@ const getMenuItems = () => {
       icon: <MessageOutlined />,
       label: "Message",
       path: "/student/message",
-    },
-    {
-      key: "communication",
-      icon: <MessageOutlined />,
-      label: "Communication",
-      children: [
-        {
-          key: "notifications",
-          label: "Notifications",
-        },
-        {
-          key: "messages",
-          label: "Messages",
-        },
-        {
-          key: "email-templates",
-          label: "Email Templates",
-        },
-      ],
-    },
-    {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "System Settings",
     },
   ];
 };
@@ -210,6 +153,10 @@ const StudentLayout = ({ children, title }) => {
     } catch (error) {
       message.error("Có lỗi xảy ra khi đăng xuất");
     }
+  };
+
+  const handleProfileClick = () => {
+    navigate("/student/profile");
   };
 
   const handleMenuClick = ({ key, item }) => {
@@ -248,17 +195,10 @@ const StudentLayout = ({ children, title }) => {
           key: "1",
           icon: <UserOutlined />,
           label: "Profile",
+          onClick: handleProfileClick,
         },
         {
           key: "2",
-          icon: <SettingOutlined />,
-          label: "Settings",
-        },
-        {
-          type: "divider",
-        },
-        {
-          key: "3",
           icon: <LogoutOutlined />,
           label: "Logout",
           danger: true,

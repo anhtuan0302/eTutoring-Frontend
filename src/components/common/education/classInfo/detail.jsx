@@ -731,12 +731,6 @@ const calculateAbsentRate = useCallback((studentId) => {
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
         <Row justify="space-between" align="middle">
           <Space>
-            <Button
-              icon={<RollbackOutlined />}
-              onClick={() => navigate(`${effectiveBasePath}/classInfo`)}
-            >
-              Back to List
-            </Button>
             {selectedStudentKeys.length > 0 && (
               <Popconfirm
                 title={`Are you sure you want to unenroll ${selectedStudentKeys.length} selected students?`}

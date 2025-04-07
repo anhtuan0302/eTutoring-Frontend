@@ -23,3 +23,11 @@ export const updateSchedule = async (scheduleId, data) => {
 export const deleteSchedule = async (scheduleId) => {
   return api.delete(`/education/classSchedule/${scheduleId}`);
 };
+
+export const getSchedulesForStudentById = async (studentId) => {
+  return api.get(`/education/classSchedule/student/${studentId}`);
+};
+
+export const getSchedulesForTutorById = async (tutorId) => {
+  return api.get(`/education/classSchedule/tutor/${tutorId}`);
+};
