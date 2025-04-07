@@ -133,25 +133,6 @@ const getMenuItems = () => {
       path: "/admin/message",
     },
     {
-      key: "communication",
-      icon: <MessageOutlined />,
-      label: "Communication",
-      children: [
-        {
-          key: "notifications",
-          label: "Notifications",
-        },
-        {
-          key: "messages",
-          label: "Messages",
-        },
-        {
-          key: "email-templates",
-          label: "Email Templates",
-        },
-      ],
-    },
-    {
       key: "reports",
       icon: <BarChartOutlined />,
       label: "Reports & Statistics",
@@ -212,6 +193,10 @@ const AppLayout = ({ children, title }) => {
     }
   };
 
+  const handleProfileClick = () => {
+    navigate("/admin/profile");
+  };
+
   const handleMenuClick = ({ key, item }) => {
     const path = item.props.path;
     if (path) {
@@ -248,6 +233,7 @@ const AppLayout = ({ children, title }) => {
           key: "1",
           icon: <UserOutlined />,
           label: "Profile",
+          onClick: handleProfileClick,
         },
         {
           key: "2",

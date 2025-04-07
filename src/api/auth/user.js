@@ -23,7 +23,7 @@ export const updateProfile = (data) => {
 };
 
 export const changePassword = (data) => {
-  return api.post('/user/change-password', data);
+  return api.post('/user/changePassword', data);
 };
 
 export const updateAvatar = (formData) => {

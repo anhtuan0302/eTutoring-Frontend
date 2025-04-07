@@ -20,6 +20,7 @@ import { ListClassTutorsPage, CreateClassTutorPage } from "../pages/admin/educat
 
 import { PostPage } from "../pages/admin/blog/post";
 import { MessagePage } from "../pages/admin/communication/message";
+import { AdminProfilePage } from "../pages/admin/auth/profile";
 
 const AdminRoutes = () => {
 
@@ -66,6 +67,7 @@ const AdminRoutes = () => {
 
             <Route path="message" element={<MessagePage />} />
             <Route path="post" element={<PostPage />} />
+            <Route path="profile" element={<AdminProfilePage />} />
 
             <Route path="*" element={<NotFoundPage />} />
         </Routes>

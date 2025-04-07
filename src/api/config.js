@@ -37,7 +37,6 @@ const initializeFirebaseAuth = async () => {
     // Kiểm tra xem đã xác thực chưa
     if (!auth.currentUser) {
       await signInAnonymously(auth);
-      console.log("Firebase authenticated successfully");
     }
   } catch (error) {
     console.error("Firebase authentication failed:", error);
