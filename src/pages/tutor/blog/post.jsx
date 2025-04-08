@@ -1,11 +1,11 @@
 import React from "react";
-import TutorLayout from "../../../components/layouts/tutor/layout";
+import AppLayout from "../../../components/layouts/layout";
 import Post from "../../../components/common/blog/post";
 
 export const PostPage = () => {
   return (
-    <TutorLayout title="Posts List">
+    <AppLayout title="Posts List">
       <Post />
-    </TutorLayout>
+    </AppLayout>
   );
 };

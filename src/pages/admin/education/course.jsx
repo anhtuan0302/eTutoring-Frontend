@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AppLayout from "../../../components/layouts/layout";
 import ListCourses from "../../../components/common/education/course/list";
 import CreateCourse from "../../../components/common/education/course/create";
 import UpdateCourse from "../../../components/common/education/course/update";
@@ -7,32 +7,32 @@ import CourseDetail from "../../../components/common/education/course/detail";
 
 export const ListCoursesPage = () => {
   return (
-    <AdminLayout title="Courses List">
+    <AppLayout title="Courses List">
       <ListCourses />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const CreateCoursePage = () => {
   return (
-    <AdminLayout title="Create Course">
+    <AppLayout title="Create Course">
       <CreateCourse />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const UpdateCoursePage = () => {
   return (
-    <AdminLayout title="Update Course">
+    <AppLayout title="Update Course">
       <UpdateCourse />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const CourseDetailPage = () => {
   return (
-    <AdminLayout title="Course Detail">
+    <AppLayout title="Course Detail">
       <CourseDetail />
-    </AdminLayout>
+    </AppLayout>
   );
 };

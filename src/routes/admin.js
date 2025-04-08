@@ -27,6 +27,7 @@ const AdminRoutes = () => {
     return (
         <Routes>
             <Route path="" element={<Dashboard />} />
+            <Route path="dashboard" element={<Dashboard />} />
             <Route path="department" element={<ListDepartmentsPage />} />
             <Route path="department/create" element={<CreateDepartmentPage />} />
             <Route path="department/:id" element={<DetailDepartmentPage />} />

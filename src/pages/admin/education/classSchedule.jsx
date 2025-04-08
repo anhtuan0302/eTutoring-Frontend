@@ -1,11 +1,11 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AppLayout from "../../../components/layouts/layout";
 import ListClassSchedules from "../../../components/common/education/classSchedule/list";
 
 export const ListClassSchedulesPage = () => {
   return (
-    <AdminLayout title="List Class Schedules">
+    <AppLayout title="List Class Schedules">
       <ListClassSchedules />
-    </AdminLayout>
+    </AppLayout>
   );
 };

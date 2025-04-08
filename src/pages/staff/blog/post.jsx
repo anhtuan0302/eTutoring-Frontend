@@ -1,11 +1,11 @@
 import React from "react";
-import StaffLayout from "../../../components/layouts/staff/layout";
+import AppLayout from "../../../components/layouts/layout";
 import Post from "../../../components/common/blog/post";
 
 export const PostPage = () => {
   return (
-    <StaffLayout title="Posts List">
+    <AppLayout title="Posts List">
       <Post />
-    </StaffLayout>
+    </AppLayout>
   );
 };

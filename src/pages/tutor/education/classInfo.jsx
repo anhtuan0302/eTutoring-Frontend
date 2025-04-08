@@ -1,20 +1,20 @@
 import React from "react";
-import TutorLayout from "../../../components/layouts/tutor/layout";
+import AppLayout from "../../../components/layouts/layout";
 import ListClasses from "../../../components/common/education/classInfo/list";
 import DetailClass from "../../../components/common/education/classInfo/detail";
 
 export const ListClassesPage = () => {
   return (
-    <TutorLayout title="List Classes">
+    <AppLayout title="List Classes">
       <ListClasses />
-    </TutorLayout>
+    </AppLayout>
   );
 };
 
 export const DetailClassPage = () => {
   return (
-    <TutorLayout title="Detail Class">
+    <AppLayout title="Detail Class">
       <DetailClass />
-    </TutorLayout>
+    </AppLayout>
   );
 };

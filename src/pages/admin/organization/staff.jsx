@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AdminLayout from "../../../components/layouts/layout";
 import ListStaffs from "../../../components/common/organization/staff/list";
 
 export const ListStaffsPage = () => {

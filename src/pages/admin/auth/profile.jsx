@@ -1,11 +1,11 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AppLayout from "../../../components/layouts/layout";
 import Profile from "../../../components/common/auth/profile";
 
 export const AdminProfilePage = () => {
   return (
-    <AdminLayout title="Admin Profile">
+    <AppLayout title="Admin Profile">
       <Profile />
-    </AdminLayout>
+    </AppLayout>
   );
 };

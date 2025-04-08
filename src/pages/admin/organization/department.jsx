@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AdminLayout from "../../../components/layouts/layout";
 import ListDepartments from "../../../components/common/organization/department/list";
 import CreateDepartment from "../../../components/common/organization/department/create";
 import UpdateDepartment from "../../../components/common/organization/department/update";

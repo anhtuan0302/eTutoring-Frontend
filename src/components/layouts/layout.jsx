@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Helmet } from "react-helmet";
 import {
   Layout,
@@ -15,15 +15,14 @@ import {
   Avatar,
   Dropdown,
   Space,
-  Divider,
   message,
+  Tag,
 } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   DashboardOutlined,
   UserOutlined,
   BookOutlined,
-  ReadOutlined,
   FileTextOutlined,
   MessageOutlined,
   BarChartOutlined,
@@ -39,9 +38,12 @@ import {
   ContactsOutlined,
 } from "@ant-design/icons";
 
-import { useAuth } from "../../../AuthContext";
+import { getAllUsers } from "../../api/auth/user";
+import { getAllClasses } from "../../api/education/classInfo";
+import { getAllCourses } from "../../api/education/course";
 
-import { staticURL } from "../../../api/config";
+import { useAuth } from "../../AuthContext";
+import { staticURL } from "../../api/config";
 
 const { Header, Sider, Content, Footer } = Layout;
 const { Title } = Typography;
@@ -57,135 +59,292 @@ const THEME_COLORS = {
   borderColor: "#E5E9F2",
 };
 
-// Define menu items with proper structure
-const getMenuItems = () => {
-  return [
-    {
-      key: "dashboard",
-      icon: <DashboardOutlined />,
-      label: "Dashboard",
-      path: "/admin/dashboard",
-    },
-    {
-      key: "calendar",
-      icon: <CalendarOutlined />,
-      label: "Calendar",
-      path: "/admin/classSchedule",
-    },
-    {
-      key: "pending-user",
-      icon: <UserOutlined />,
-      label: "Pending Users",
-      path: "/admin/pendingUser",
-    },
-    {
-      key: "all-user",
-      icon: <UsergroupAddOutlined />,
-      label: "All Users",
-      children: [
-        {
-          key: "admin",
-          label: "Admin",
-          path: "/admin/admin",
-        },
-        {
-          key: "staff",
-          label: "Staff",
-          path: "/admin/staff",
-        },
-        {
-          key: "tutor",
-          label: "Tutor",
-          path: "/admin/tutor",
-        },
-        {
-          key: "student",
-          label: "Student",
-          path: "/admin/student",
-        },
-        {
-          key: "department",
-          label: "Department",
-          path: "/admin/department",
-        },
-      ],
-    },
-    {
-      key: "classes",
-      icon: <ContactsOutlined />,
-      label: "Classes",
-      path: "/admin/classInfo",
-    },
-    {
-      key: "courses",
-      icon: <BookOutlined />,
-      label: "Courses",
-      path: "/admin/course",
-    },
-    {
-      key: "post",
-      icon: <FileTextOutlined />,
-      label: "Posts",
-      path: "/admin/post",
-    },
-    {
-      key: "message",
-      icon: <MessageOutlined />,
-      label: "Message",
-      path: "/admin/message",
-    },
-    {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Reports & Statistics",
-      children: [
-        {
-          key: "user-reports",
-          label: "User Statistics",
-        },
-        {
-          key: "course-reports",
-          label: "Course Statistics",
-        },
-        {
-          key: "attendance-reports",
-          label: "Attendance Statistics",
-        },
-        {
-          key: "grade-reports",
-          label: "Grade Statistics",
-        },
-        {
-          key: "account-history",
-          label: "Activity History",
-        },
-      ],
-    },
-    {
-      key: "settings",
-      icon: <SettingOutlined />,
-      label: "System Settings",
-    },
-  ];
-};
-
 const AppLayout = ({ children, title }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const {
-    token: { borderRadiusLG },
-  } = theme.useToken();
+  // Xác định basePath dựa trên role của user
+  const basePath = useMemo(() => {
+    switch (user?.role) {
+      case "admin":
+        return "/admin";
+      case "staff":
+        return "/staff";
+      case "tutor":
+        return "/tutor";
+      case "student":
+        return "/student";
+      default:
+        return "/";
+    }
+  }, [user?.role]);
 
+  // Xác định permissions dựa trên role của user
+  const permissions = useMemo(() => {
+    switch (user?.role) {
+      case "admin":
+        return {
+          canViewDashboard: true,
+          canViewCalendar: true,
+          canViewPendingUsers: true,
+          canViewAllUsers: true,
+          canViewClasses: true,
+          canViewCourses: true,
+          canViewPosts: true,
+          canViewMessages: true,
+          canViewReports: true,
+          canViewSettings: true,
+        };
+      case "staff":
+        return {
+          canViewDashboard: true,
+          canViewCalendar: true,
+          canViewPendingUsers: true,
+          canViewAllUsers: true,
+          canViewClasses: true,
+          canViewCourses: true,
+          canViewPosts: true,
+          canViewMessages: true,
+          canViewReports: true,
+          canViewSettings: false,
+        };
+      case "tutor":
+        return {
+          canViewDashboard: true,
+          canViewCalendar: true,
+          canViewPendingUsers: false,
+          canViewAllUsers: false,
+          canViewClasses: true,
+          canViewCourses: true,
+          canViewPosts: true,
+          canViewMessages: true,
+          canViewReports: false,
+          canViewSettings: false,
+        };
+      case "student":
+        return {
+          canViewDashboard: true,
+          canViewCalendar: true,
+          canViewPendingUsers: false,
+          canViewAllUsers: false,
+          canViewClasses: true,
+          canViewCourses: true,
+          canViewPosts: true,
+          canViewMessages: true,
+          canViewReports: false,
+          canViewSettings: false,
+        };
+      default:
+        return {
+          canViewDashboard: false,
+          canViewCalendar: false,
+          canViewPendingUsers: false,
+          canViewAllUsers: false,
+          canViewClasses: false,
+          canViewCourses: false,
+          canViewPosts: false,
+          canViewMessages: false,
+          canViewReports: false,
+          canViewSettings: false,
+        };
+    }
+  }, [user?.role]);
+
+  // States
   const [isMobile, setIsMobile] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [openKeys, setOpenKeys] = useState([]);
   const [searchValue, setSearchValue] = useState("");
   const [searchOptions, setSearchOptions] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  const { logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+  // Get menu items based on permissions
+  const getMenuItems = useCallback(() => {
+    const items = [];
+
+    if (permissions.canViewDashboard) {
+      items.push({
+        key: "dashboard",
+        icon: <DashboardOutlined />,
+        label: "Dashboard",
+        path: `${basePath}/dashboard`,
+      });
+    }
+
+    if (permissions.canViewCalendar) {
+      items.push({
+        key: "calendar",
+        icon: <CalendarOutlined />,
+        label: "Calendar",
+        path: `${basePath}/classSchedule`,
+      });
+    }
+
+    if (permissions.canViewPendingUsers) {
+      items.push({
+        key: "pending-user",
+        icon: <UserOutlined />,
+        label: "Pending Users",
+        path: `${basePath}/pendingUser`,
+      });
+    }
+
+    if (permissions.canViewAllUsers) {
+      items.push({
+        key: "all-user",
+        icon: <UsergroupAddOutlined />,
+        label: "All Users",
+        children: [
+          {
+            key: "admin",
+            label: "Admin",
+            path: `${basePath}/admin`,
+          },
+          {
+            key: "staff",
+            label: "Staff",
+            path: `${basePath}/staff`,
+          },
+          {
+            key: "tutor",
+            label: "Tutor",
+            path: `${basePath}/tutor`,
+          },
+          {
+            key: "student",
+            label: "Student",
+            path: `${basePath}/student`,
+          },
+          {
+            key: "department",
+            label: "Department",
+            path: `${basePath}/department`,
+          },
+        ],
+      });
+    }
+
+    if (permissions.canViewClasses) {
+      items.push({
+        key: "classes",
+        icon: <ContactsOutlined />,
+        label: "Classes",
+        path: `${basePath}/classInfo`,
+      });
+    }
+
+    if (permissions.canViewCourses) {
+      items.push({
+        key: "courses",
+        icon: <BookOutlined />,
+        label: "Courses",
+        path: `${basePath}/course`,
+      });
+    }
+
+    if (permissions.canViewPosts) {
+      items.push({
+        key: "post",
+        icon: <FileTextOutlined />,
+        label: "Posts",
+        path: `${basePath}/post`,
+      });
+    }
+
+    if (permissions.canViewMessages) {
+      items.push({
+        key: "message",
+        icon: <MessageOutlined />,
+        label: "Message",
+        path: `${basePath}/message`,
+      });
+    }
+
+    if (permissions.canViewReports) {
+      items.push({
+        key: "reports",
+        icon: <BarChartOutlined />,
+        label: "Reports & Statistics",
+        children: [
+          {
+            key: "user-reports",
+            label: "User Statistics",
+            path: `${basePath}/reports/users`,
+          },
+          {
+            key: "course-reports",
+            label: "Course Statistics",
+            path: `${basePath}/reports/courses`,
+          },
+          {
+            key: "attendance-reports",
+            label: "Attendance Statistics",
+            path: `${basePath}/reports/attendance`,
+          },
+          {
+            key: "grade-reports",
+            label: "Grade Statistics",
+            path: `${basePath}/reports/grades`,
+          },
+          {
+            key: "account-history",
+            label: "Activity History",
+            path: `${basePath}/reports/activity`,
+          },
+        ],
+      });
+    }
+
+    if (permissions.canViewSettings) {
+      items.push({
+        key: "settings",
+        icon: <SettingOutlined />,
+        label: "System Settings",
+        path: `${basePath}/settings`,
+      });
+    }
+
+    return items;
+  }, [permissions, basePath]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [usersResponse, classesResponse, coursesResponse] =
+          await Promise.all([getAllUsers(), getAllClasses(), getAllCourses()]);
+
+        console.log("Users Response:", usersResponse);
+        console.log("Classes Response:", classesResponse);
+        console.log("Courses Response:", coursesResponse);
+
+        // Lấy mảng users từ response
+        const usersData = usersResponse.users || [];
+        const classesData = classesResponse || [];
+        const coursesData = coursesResponse || [];
+
+        console.log("Processed Users:", usersData);
+        console.log("Processed Classes:", classesData);
+        console.log("Processed Courses:", coursesData);
+
+        setUsers(usersData);
+        setClasses(classesData);
+        setCourses(coursesData);
+        setIsDataLoaded(true);
+      } catch (error) {
+        console.error("Error fetching search data:", error);
+        setUsers([]);
+        setClasses([]);
+        setCourses([]);
+        setIsDataLoaded(true);
+      }
+    };
+    fetchData();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -198,7 +357,7 @@ const AppLayout = ({ children, title }) => {
   };
 
   const handleProfileClick = () => {
-    navigate("/admin/profile");
+    navigate(`${basePath}/profile`);
   };
 
   const handleMenuClick = ({ key, item }) => {
@@ -208,7 +367,7 @@ const AppLayout = ({ children, title }) => {
     }
   };
 
-  const getSelectedKeys = () => {
+  const getSelectedKeys = useCallback(() => {
     const currentPath = location.pathname;
     const menuItems = getMenuItems();
 
@@ -227,7 +386,7 @@ const AppLayout = ({ children, title }) => {
 
     const selectedKey = findKey(menuItems);
     return selectedKey ? [selectedKey] : ["dashboard"];
-  };
+  }, [location.pathname, getMenuItems]);
 
   // Header components
   const renderUserMenu = () => (
@@ -295,54 +454,203 @@ const AppLayout = ({ children, title }) => {
     setSearchValue(value);
     setIsSearching(true);
 
-    // Simulate searching data from API
-    if (value) {
-      // This is a mock implementation - replace with actual API call
-      setTimeout(() => {
-        // Mock results - this would be replaced with actual API data
-        const mockResults =
-          value.length > 0
-            ? [
-                {
-                  value: "Course: " + value,
-                  label: (
-                    <div>
-                      Course: <b>{value}</b>
-                    </div>
-                  ),
-                },
-                {
-                  value: "User: " + value,
-                  label: (
-                    <div>
-                      User: <b>{value}</b>
-                    </div>
-                  ),
-                },
-                {
-                  value: "Class: " + value,
-                  label: (
-                    <div>
-                      Class: <b>{value}</b>
-                    </div>
-                  ),
-                },
-              ]
-            : [];
+    if (value && isDataLoaded) {
+      const searchLower = value.toLowerCase();
+      
+      // Lọc users dựa trên role của người dùng hiện tại
+      let matchedUsers = users.filter(user => 
+        user && (
+          `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchLower) ||
+          user.email.toLowerCase().includes(searchLower) ||
+          user.username.toLowerCase().includes(searchLower)
+        )
+      );
 
-        setSearchOptions(mockResults);
-        setIsSearching(false);
-      }, 300);
+      // Lọc kết quả dựa trên role của người dùng hiện tại
+      switch (user?.role) {
+        case 'admin':
+        case 'staff':
+          // Admin và staff có thể thấy tất cả users
+          break;
+        case 'tutor':
+          // Tutor không thể thấy admin
+          matchedUsers = matchedUsers.filter(u => u.role !== 'admin');
+          break;
+        case 'student':
+          // Student chỉ có thể thấy tutor và student khác
+          matchedUsers = matchedUsers.filter(u => 
+            u.role === 'tutor' || u.role === 'student'
+          );
+          break;
+        default:
+          matchedUsers = [];
+      }
+
+      matchedUsers = matchedUsers.slice(0, 5);
+
+      // Tìm kiếm classes và courses như cũ
+      const matchedClasses = classes.filter(cls => 
+        cls && (
+          cls.code.toLowerCase().includes(searchLower) ||
+          cls.name.toLowerCase().includes(searchLower) ||
+          cls.course_id?.name.toLowerCase().includes(searchLower)
+        )
+      ).slice(0, 5);
+
+      const matchedCourses = courses.filter(course => 
+        course && (
+          course.code.toLowerCase().includes(searchLower) ||
+          course.name.toLowerCase().includes(searchLower)
+        )
+      ).slice(0, 5);
+
+      const options = [];
+
+      // Thêm users nếu có kết quả
+      if (matchedUsers.length > 0) {
+        options.push({
+          label: <div style={{ fontWeight: 'bold', padding: '8px 12px', backgroundColor: '#fafafa' }}>
+            Users for "{value}"
+          </div>,
+          options: matchedUsers.map(user => ({
+            value: `user-${user._id}`,
+            label: (
+              <div style={{ display: 'flex', alignItems: 'center' }}>
+                <Avatar 
+                  size="small" 
+                  src={user.avatar_path ? `${staticURL}/${user.avatar_path}` : null}
+                  icon={!user.avatar_path && <UserOutlined />}
+                  style={{ marginRight: 8 }}
+                />
+                <div>
+                  <div>
+                    {`${user.first_name} ${user.last_name}`}
+                    <Tag 
+                      color={
+                        user.role === 'admin' ? 'red' : 
+                        user.role === 'staff' ? 'blue' :
+                        user.role === 'tutor' ? 'green' : 
+                        'orange'
+                      }
+                      style={{ marginLeft: 8 }}
+                    >
+                      {user.role.toUpperCase()}
+                    </Tag>
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>
+                    {user.username} - {user.email}
+                  </div>
+                </div>
+              </div>
+            ),
+          }))
+        });
+      }
+
+      // Thêm classes nếu có kết quả
+      if (matchedClasses.length > 0) {
+        if (options.length > 0) {
+          options.push({
+            type: "divider",
+          });
+        }
+        options.push({
+          label: (
+            <div
+              style={{
+                fontWeight: "bold",
+                padding: "8px 12px",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              Classes for "{value}"
+            </div>
+          ),
+          options: matchedClasses.map((cls) => ({
+            value: `class-${cls._id}`,
+            label: (
+              <div>
+                <ContactsOutlined style={{ marginRight: 8 }} />
+                <div style={{ display: "inline-block" }}>
+                  <div>
+                    {cls.code} - {cls.name}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    {cls.course_id?.name} ({cls.course_id?.code})
+                  </div>
+                </div>
+              </div>
+            ),
+          })),
+        });
+      }
+
+      // Thêm courses nếu có kết quả
+      if (matchedCourses.length > 0) {
+        if (options.length > 0) {
+          options.push({
+            type: "divider",
+          });
+        }
+        options.push({
+          label: (
+            <div
+              style={{
+                fontWeight: "bold",
+                padding: "8px 12px",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              Courses for "{value}"
+            </div>
+          ),
+          options: matchedCourses.map((course) => ({
+            value: `course-${course._id}`,
+            label: (
+              <div>
+                <BookOutlined style={{ marginRight: 8 }} />
+                <div style={{ display: "inline-block" }}>
+                  <div>{course.name}</div>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
+                    {course.code} - {course.department_id?.name}
+                  </div>
+                </div>
+              </div>
+            ),
+          })),
+        });
+      }
+
+      setSearchOptions(options);
     } else {
       setSearchOptions([]);
-      setIsSearching(false);
     }
+    setIsSearching(false);
   };
 
   // Handle selecting a search result
   const handleSelectResult = (value) => {
-    console.log("Selected:", value);
-    // Handle navigation or display of selected result
+    const [type, id] = value.split("-");
+
+    switch (type) {
+      case "user":
+        const user = users.find((u) => u._id === id);
+        if (user) {
+          navigate(`${basePath}/${user.role}/${id}`);
+        }
+        break;
+      case "class":
+        navigate(`${basePath}/classInfo/${id}`);
+        break;
+      case "course":
+        navigate(`${basePath}/course/${id}`);
+        break;
+      default:
+        break;
+    }
+
+    setSearchValue("");
+    setSearchOptions([]);
   };
 
   // Custom search dropdown rendering
@@ -448,19 +756,24 @@ const AppLayout = ({ children, title }) => {
                   onSelect={handleSelectResult}
                   onSearch={handleSearchChange}
                   value={searchValue}
-                  placeholder="Search for courses, users, classes..."
+                  placeholder="Search for users, classes, courses..."
                   notFoundContent={
                     isSearching ? (
                       <div style={{ padding: "10px", textAlign: "center" }}>
                         Searching...
                       </div>
                     ) : (
-                      renderSearchNotFound()
+                      <Empty
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        description="No results found"
+                      />
                     )
                   }
                   dropdownMatchSelectWidth={400}
                 >
-                  <Input style={{ borderRadius: "6px" }} />
+                  <Input
+                    style={{ borderRadius: "6px" }}
+                  />
                 </AutoComplete>
               ) : (
                 <div

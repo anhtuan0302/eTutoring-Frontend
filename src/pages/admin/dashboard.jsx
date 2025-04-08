@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../components/layouts/admin/layout";
+import AppLayout from "../../components/layouts/layout";
 import { Row, Col, Card, Typography, Space, Table, Progress, Tag, Avatar, Timeline, Statistic } from 'antd';
 import { UserOutlined, BookOutlined, TeamOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { BarChart } from '@mui/x-charts/BarChart';
@@ -168,7 +168,7 @@ const content = (
 
 const Dashboard = () => {
   return (
-    <AdminLayout title="Dashboard" children={content} />
+    <AppLayout title="Dashboard" children={content} />
   );
 };
 

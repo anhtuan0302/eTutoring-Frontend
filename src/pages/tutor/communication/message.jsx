@@ -1,11 +1,11 @@
 import React from "react";
-import TutorLayout from "../../../components/layouts/tutor/layout";
+import AppLayout from "../../../components/layouts/layout";
 import Message from "../../../components/common/communication/message";
 
 export const MessagePage = () => {
   return (
-    <TutorLayout title="Message">
+    <AppLayout title="Message">
       <Message />
-    </TutorLayout>
+    </AppLayout>
   );
 };

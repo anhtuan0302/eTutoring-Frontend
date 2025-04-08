@@ -1,11 +1,11 @@
 import React from "react";
-import StaffLayout from "../../../components/layouts/staff/layout";
+import AppLayout from "../../../components/layouts/layout";
 import Message from "../../../components/common/communication/message";
 
 export const MessagePage = () => {
   return (
-    <StaffLayout title="Message">
+    <AppLayout title="Message">
       <Message />
-    </StaffLayout>
+    </AppLayout>
   );
 };

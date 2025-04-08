@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AppLayout from "../../../components/layouts/layout";
 import ListEnrollments from "../../../components/common/education/enrollment/list";
 import CreateEnrollment from "../../../components/common/education/enrollment/create";
 import DetailEnrollment from "../../../components/common/education/enrollment/detail";
@@ -7,32 +7,32 @@ import UpdateEnrollment from "../../../components/common/education/enrollment/up
 
 export const ListEnrollmentsPage = () => {
   return (
-    <AdminLayout title="List Enrollments">
+    <AppLayout title="List Enrollments">
       <ListEnrollments />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const CreateEnrollmentPage = () => {
   return (
-    <AdminLayout title="Create Enrollment">
+    <AppLayout title="Create Enrollment">
       <CreateEnrollment />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const DetailEnrollmentPage = () => {
   return (
-    <AdminLayout title="Detail Enrollment">
+    <AppLayout title="Detail Enrollment">
       <DetailEnrollment />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const UpdateEnrollmentPage = () => {
   return (
-    <AdminLayout title="Update Enrollment">
+    <AppLayout title="Update Enrollment">
       <UpdateEnrollment />
-    </AdminLayout>
+    </AppLayout>
   );
 };

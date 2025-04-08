@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AppLayout from "../../../components/layouts/layout";
 import ListClasses from "../../../components/common/education/classInfo/list";
 import CreateClass from "../../../components/common/education/classInfo/create";
 import DetailClass from "../../../components/common/education/classInfo/detail";
@@ -7,32 +7,32 @@ import UpdateClass from "../../../components/common/education/classInfo/update";
 
 export const ListClassesPage = () => {
   return (
-    <AdminLayout title="List Classes">
+    <AppLayout title="List Classes">
       <ListClasses />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const CreateClassPage = () => {
   return (
-    <AdminLayout title="Create Class">
+    <AppLayout title="Create Class">
       <CreateClass />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const DetailClassPage = () => {
   return (
-    <AdminLayout title="Detail Class">
+    <AppLayout title="Detail Class">
       <DetailClass />
-    </AdminLayout>
+    </AppLayout>
   );
 };
 
 export const UpdateClassPage = () => {
   return (
-    <AdminLayout title="Update Class">
+    <AppLayout title="Update Class">
       <UpdateClass />
-    </AdminLayout>
+    </AppLayout>
   );
 };

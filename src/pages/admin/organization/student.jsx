@@ -1,5 +1,5 @@
 import React from "react";
-import AdminLayout from "../../../components/layouts/admin/layout";
+import AdminLayout from "../../../components/layouts/layout";
 import ListStudents from "../../../components/common/organization/student/list";
 import CreatePendingStudent from "../../../components/common/organization/student/create";
 
