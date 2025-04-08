@@ -17,6 +17,9 @@ import {
   Space,
   message,
   Tag,
+  Popover,
+  List,
+  Spin,
 } from "antd";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -38,10 +41,14 @@ import {
   ContactsOutlined,
 } from "@ant-design/icons";
 
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+import "dayjs/locale/en";
+
 import { getAllUsers } from "../../api/auth/user";
 import { getAllClasses } from "../../api/education/classInfo";
 import { getAllCourses } from "../../api/education/course";
-
+import firebaseNotificationService from "../../api/firebaseNotification";
 import { useAuth } from "../../AuthContext";
 import { staticURL } from "../../api/config";
 
@@ -58,6 +65,9 @@ const THEME_COLORS = {
   textSecondary: "#666666",
   borderColor: "#E5E9F2",
 };
+
+dayjs.extend(relativeTime);
+dayjs.locale("en");
 
 const AppLayout = ({ children, title }) => {
   const { user, logout } = useAuth();
@@ -162,6 +172,10 @@ const AppLayout = ({ children, title }) => {
   const [classes, setClasses] = useState([]);
   const [courses, setCourses] = useState([]);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notificationLoading, setNotificationLoading] = useState(true);
 
   // Get menu items based on permissions
   const getMenuItems = useCallback(() => {
@@ -318,18 +332,10 @@ const AppLayout = ({ children, title }) => {
         const [usersResponse, classesResponse, coursesResponse] =
           await Promise.all([getAllUsers(), getAllClasses(), getAllCourses()]);
 
-        console.log("Users Response:", usersResponse);
-        console.log("Classes Response:", classesResponse);
-        console.log("Courses Response:", coursesResponse);
-
         // Lấy mảng users từ response
         const usersData = usersResponse.users || [];
         const classesData = classesResponse || [];
         const coursesData = coursesResponse || [];
-
-        console.log("Processed Users:", usersData);
-        console.log("Processed Classes:", classesData);
-        console.log("Processed Courses:", coursesData);
 
         setUsers(usersData);
         setClasses(classesData);
@@ -345,6 +351,41 @@ const AppLayout = ({ children, title }) => {
     };
     fetchData();
   }, []);
+
+  // useEffect for notifications
+  useEffect(() => {
+    if (user?._id) {
+      const unsubscribeNotifications =
+        firebaseNotificationService.subscribeToNotifications(
+          user._id,
+          (notifs) => {
+            // Chỉ lấy các notification hợp lệ (key không phải số)
+            const validNotifications = notifs.filter(
+              (notification) => notification._id.startsWith("-") // Firebase auto-generated ID bắt đầu bằng '-'
+            );
+
+            console.log("Valid notifications:", validNotifications);
+            setNotifications(validNotifications);
+            setNotificationLoading(false);
+          }
+        );
+
+      const unsubscribeCount =
+        firebaseNotificationService.subscribeToUnreadCount(
+          user._id,
+          (count) => {
+            // Chỉ đếm các notification hợp lệ
+            const validCount = count;
+            setNotificationCount(validCount);
+          }
+        );
+
+      return () => {
+        unsubscribeNotifications();
+        unsubscribeCount();
+      };
+    }
+  }, [user?._id]);
 
   const handleLogout = async () => {
     try {
@@ -366,6 +407,153 @@ const AppLayout = ({ children, title }) => {
       navigate(path);
     }
   };
+
+  const handleNotificationClick = async (notification) => {
+    try {
+      // Kiểm tra xem notification có tồn tại và chưa được đọc
+      if (notification && notification._id && !notification.is_read) {
+        console.log("Marking notification as read:", notification._id);
+
+        // Đóng popover trước khi thực hiện update
+        setNotificationVisible(false);
+
+        // Cập nhật trạng thái đã đọc
+        await firebaseNotificationService.markAsRead(
+          user._id,
+          notification._id
+        );
+
+        // Thực hiện navigation nếu có
+        if (notification.reference_type && notification.reference_id) {
+          switch (notification.reference_type) {
+            case "class":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            default:
+              break;
+          }
+        }
+      } else {
+        // Nếu notification đã được đọc, chỉ cần đóng popover và navigate
+        setNotificationVisible(false);
+        if (notification.reference_type && notification.reference_id) {
+          switch (notification.reference_type) {
+            case "class":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            default:
+              break;
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error handling notification click:", error);
+      message.error("Có lỗi xảy ra khi cập nhật thông báo");
+    }
+  };
+
+  const handleMarkAllAsRead = async () => {
+    if (user?._id) {
+      await firebaseNotificationService.markAllAsRead(user._id);
+    }
+  };
+
+  const notificationContent = (
+    <div style={{ width: 400 }}>
+      <div
+        style={{
+          padding: "12px 24px",
+          borderBottom: "1px solid #f0f0f0",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+        }}
+      >
+        <h6 style={{ margin: 0 }}>Notifications</h6>
+        {notificationCount > 0 && (
+          <Button type="link" onClick={handleMarkAllAsRead}>
+            Mark all as read
+          </Button>
+        )}
+      </div>
+
+      {notificationLoading ? (
+        <div style={{ padding: "24px", textAlign: "center" }}>
+          <Spin />
+        </div>
+      ) : notifications && notifications.length > 0 ? (
+        <List
+          style={{
+            maxHeight: "400px",
+            overflowY: "auto",
+            paddingBottom: "12px",
+          }}
+          dataSource={notifications}
+          renderItem={(notification) => {
+            const isUnread = !notification.is_read;
+            return (
+              <List.Item
+                onClick={() => handleNotificationClick(notification)}
+                style={{
+                  backgroundColor: isUnread ? "#f0f7ff" : "white",
+                  cursor: "pointer",
+                  padding: "12px 24px",
+                  transition: "background-color 0.3s",
+                }}
+                className={isUnread ? "unread-notification" : ""}
+              >
+                <List.Item.Meta
+                  title={
+                    <div
+                      style={{
+                        color: isUnread ? "#1890ff" : "inherit",
+                        fontWeight: isUnread ? 500 : 400,
+                      }}
+                    >
+                      {notification.content}
+                    </div>
+                  }
+                  description={
+                    <div style={{ fontSize: "12px", color: "#666" }}>
+                      {notification.created_at
+                        ? dayjs(notification.created_at).fromNow()
+                        : "Just now"}
+                      {notification.notification_type && (
+                        <Tag
+                          color={
+                            notification.notification_type === "class_enrolled"
+                              ? "green"
+                              : notification.notification_type ===
+                                "class_unenrolled"
+                              ? "red"
+                              : "blue"
+                          }
+                          style={{ marginLeft: 8 }}
+                        >
+                          {notification.notification_type === "class_enrolled"
+                            ? "Enrolled"
+                            : notification.notification_type ===
+                              "class_unenrolled"
+                            ? "Unenrolled"
+                            : "General"}
+                        </Tag>
+                      )}
+                    </div>
+                  }
+                />
+              </List.Item>
+            );
+          }}
+        />
+      ) : (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="No notifications"
+          style={{ padding: "24px" }}
+        />
+      )}
+    </div>
+  );
 
   const getSelectedKeys = useCallback(() => {
     const currentPath = location.pathname;
@@ -456,30 +644,32 @@ const AppLayout = ({ children, title }) => {
 
     if (value && isDataLoaded) {
       const searchLower = value.toLowerCase();
-      
+
       // Lọc users dựa trên role của người dùng hiện tại
-      let matchedUsers = users.filter(user => 
-        user && (
-          `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchLower) ||
-          user.email.toLowerCase().includes(searchLower) ||
-          user.username.toLowerCase().includes(searchLower)
-        )
+      let matchedUsers = users.filter(
+        (user) =>
+          user &&
+          (`${user.first_name} ${user.last_name}`
+            .toLowerCase()
+            .includes(searchLower) ||
+            user.email.toLowerCase().includes(searchLower) ||
+            user.username.toLowerCase().includes(searchLower))
       );
 
       // Lọc kết quả dựa trên role của người dùng hiện tại
       switch (user?.role) {
-        case 'admin':
-        case 'staff':
+        case "admin":
+        case "staff":
           // Admin và staff có thể thấy tất cả users
           break;
-        case 'tutor':
+        case "tutor":
           // Tutor không thể thấy admin
-          matchedUsers = matchedUsers.filter(u => u.role !== 'admin');
+          matchedUsers = matchedUsers.filter((u) => u.role !== "admin");
           break;
-        case 'student':
+        case "student":
           // Student chỉ có thể thấy tutor và student khác
-          matchedUsers = matchedUsers.filter(u => 
-            u.role === 'tutor' || u.role === 'student'
+          matchedUsers = matchedUsers.filter(
+            (u) => u.role === "tutor" || u.role === "student"
           );
           break;
         default:
@@ -489,61 +679,78 @@ const AppLayout = ({ children, title }) => {
       matchedUsers = matchedUsers.slice(0, 5);
 
       // Tìm kiếm classes và courses như cũ
-      const matchedClasses = classes.filter(cls => 
-        cls && (
-          cls.code.toLowerCase().includes(searchLower) ||
-          cls.name.toLowerCase().includes(searchLower) ||
-          cls.course_id?.name.toLowerCase().includes(searchLower)
-        )
-      ).slice(0, 5);
+      const matchedClasses = classes
+      .filter(
+        (cls) =>
+          cls &&
+          ((cls.code && cls.code.toLowerCase().includes(searchLower)) ||
+           (cls.name && cls.name.toLowerCase().includes(searchLower)) ||
+           (cls.course_id?.name && cls.course_id.name.toLowerCase().includes(searchLower)))
+      )
+      .slice(0, 5);
 
-      const matchedCourses = courses.filter(course => 
-        course && (
-          course.code.toLowerCase().includes(searchLower) ||
-          course.name.toLowerCase().includes(searchLower)
+      const matchedCourses = courses
+        .filter(
+          (course) =>
+            course &&
+            (course.code.toLowerCase().includes(searchLower) ||
+              course.name.toLowerCase().includes(searchLower))
         )
-      ).slice(0, 5);
+        .slice(0, 5);
 
       const options = [];
 
       // Thêm users nếu có kết quả
       if (matchedUsers.length > 0) {
         options.push({
-          label: <div style={{ fontWeight: 'bold', padding: '8px 12px', backgroundColor: '#fafafa' }}>
-            Users for "{value}"
-          </div>,
-          options: matchedUsers.map(user => ({
+          label: (
+            <div
+              style={{
+                fontWeight: "bold",
+                padding: "8px 12px",
+                backgroundColor: "#fafafa",
+              }}
+            >
+              Users for "{value}"
+            </div>
+          ),
+          options: matchedUsers.map((user) => ({
             value: `user-${user._id}`,
             label: (
-              <div style={{ display: 'flex', alignItems: 'center' }}>
-                <Avatar 
-                  size="small" 
-                  src={user.avatar_path ? `${staticURL}/${user.avatar_path}` : null}
+              <div style={{ display: "flex", alignItems: "center" }}>
+                <Avatar
+                  size="small"
+                  src={
+                    user.avatar_path ? `${staticURL}/${user.avatar_path}` : null
+                  }
                   icon={!user.avatar_path && <UserOutlined />}
                   style={{ marginRight: 8 }}
                 />
                 <div>
                   <div>
                     {`${user.first_name} ${user.last_name}`}
-                    <Tag 
+                    <Tag
                       color={
-                        user.role === 'admin' ? 'red' : 
-                        user.role === 'staff' ? 'blue' :
-                        user.role === 'tutor' ? 'green' : 
-                        'orange'
+                        user.role === "admin"
+                          ? "red"
+                          : user.role === "staff"
+                          ? "blue"
+                          : user.role === "tutor"
+                          ? "green"
+                          : "orange"
                       }
                       style={{ marginLeft: 8 }}
                     >
                       {user.role.toUpperCase()}
                     </Tag>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>
+                  <div style={{ fontSize: "12px", color: "#666" }}>
                     {user.username} - {user.email}
                   </div>
                 </div>
               </div>
             ),
-          }))
+          })),
         });
       }
 
@@ -573,10 +780,11 @@ const AppLayout = ({ children, title }) => {
                 <ContactsOutlined style={{ marginRight: 8 }} />
                 <div style={{ display: "inline-block" }}>
                   <div>
-                    {cls.code} - {cls.name}
+                    {cls.code || 'N/A'} {cls.name ? `- ${cls.name}` : ''}
                   </div>
                   <div style={{ fontSize: "12px", color: "#666" }}>
-                    {cls.course_id?.name} ({cls.course_id?.code})
+                    {cls.course_id?.name ? `${cls.course_id.name}` : 'No course'} 
+                    {cls.course_id?.code ? ` (${cls.course_id.code})` : ''}
                   </div>
                 </div>
               </div>
@@ -771,9 +979,7 @@ const AppLayout = ({ children, title }) => {
                   }
                   dropdownMatchSelectWidth={400}
                 >
-                  <Input
-                    style={{ borderRadius: "6px" }}
-                  />
+                  <Input style={{ borderRadius: "6px" }} />
                 </AutoComplete>
               ) : (
                 <div
@@ -812,11 +1018,21 @@ const AppLayout = ({ children, title }) => {
               )}
 
               {/* Notifications - Sửa lại vị trí Badge */}
-              <Button type="text" style={{ marginRight: "12px" }}>
-                <Badge count={5}>
-                  <BellOutlined />
-                </Badge>
-              </Button>
+              <Popover
+                content={notificationContent}
+                trigger="click"
+                placement="bottomRight"
+                open={notificationVisible}
+                onOpenChange={setNotificationVisible}
+                overlayStyle={{ padding: 0 }}
+                overlayInnerStyle={{ padding: 0 }}
+              >
+                <Button type="text" style={{ marginRight: "12px" }}>
+                  <Badge count={notificationCount}>
+                    <BellOutlined style={{ fontSize: "20px" }} />
+                  </Badge>
+                </Button>
+              </Popover>
 
               {/* User Account Dropdown */}
               {!isMobile && (
@@ -1036,3 +1252,18 @@ const AppLayout = ({ children, title }) => {
 };
 
 export default AppLayout;
+
+const styles = `
+  .unread-notification:hover {
+    background-color: #e6f7ff !important;
+  }
+
+  .ant-list-item {
+    transition: background-color 0.3s;
+  }
+
+  .ant-popover-inner {
+    border-radius: 8px;
+    overflow: hidden;
+  }
+`;

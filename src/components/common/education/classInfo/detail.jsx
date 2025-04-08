@@ -31,6 +31,7 @@ import { useAuth } from "../../../../AuthContext";
 import { getClassById } from "../../../../api/education/classInfo";
 import { unenrollStudent } from "../../../../api/education/enrollment";
 import { removeTutor } from "../../../../api/education/classTutor";
+import firebaseNotificationService from "../../../../api/firebaseNotification";
 import {
   deleteSchedule,
   updateSchedule,
@@ -188,65 +189,146 @@ const calculateAbsentRate = useCallback((studentId) => {
   return Math.round((absentCount / totalSchedules) * 100);
 }, [classInfo]);
 
-  const handleUnenrollStudent = useCallback(
-    async (enrollmentId) => {
-      try {
-        await unenrollStudent(enrollmentId);
-        message.success("Student unenrolled successfully");
-        const response = await getClassById(id);
-        setClassInfo(response);
-        setSelectedStudentKeys([]);
-      } catch (error) {
-        message.error(
-          error.response?.data?.error || "Error unenrolling student"
-        );
-      }
-    },
-    [id]
-  );
-
-  const handleBulkUnenroll = useCallback(async () => {
+const handleUnenrollStudent = useCallback(
+  async (enrollmentId) => {
     try {
-      await Promise.all(selectedStudentKeys.map((id) => unenrollStudent(id)));
-      message.success(
-        `Unenrolled ${selectedStudentKeys.length} students successfully`
+      // Tìm thông tin enrollment trước khi unenroll
+      const enrollment = classInfo.enrollments.find(e => e._id === enrollmentId);
+      if (!enrollment) {
+        throw new Error("Enrollment not found");
+      }
+
+      // Unenroll sinh viên
+      await unenrollStudent(enrollmentId);
+      
+      // Gửi thông báo cho sinh viên
+      await firebaseNotificationService.createNotification(
+        enrollment.student_id.user_id._id, // user_id của sinh viên
+        {
+          content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
+          notification_type: "class_unenrolled",
+          reference_type: "class",
+          reference_id: classInfo._id
+        }
       );
+
+      message.success("Student unenrolled successfully");
+      
+      // Refresh lại dữ liệu lớp học
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedStudentKeys([]);
     } catch (error) {
-      message.error("Error unenrolling students");
+      message.error(error.response?.data?.error || "Error unenrolling student");
     }
-  }, [selectedStudentKeys, id]);
+  },
+  [id, classInfo]
+);
 
-  const handleRemoveTutor = useCallback(
-    async (tutorId) => {
-      try {
-        await removeTutor(tutorId);
-        message.success("Tutor removed successfully");
-        const response = await getClassById(id);
-        setClassInfo(response);
-        setSelectedTutorKeys([]);
-      } catch (error) {
-        message.error(error.response?.data?.error || "Error removing tutor");
-      }
-    },
-    [id]
-  );
 
-  const handleBulkRemoveTutors = useCallback(async () => {
-    try {
-      await Promise.all(selectedTutorKeys.map((id) => removeTutor(id)));
-      message.success(
-        `Removed ${selectedTutorKeys.length} tutors successfully`
+const handleBulkUnenroll = useCallback(async () => {
+  try {
+    // Lấy danh sách các enrollment được chọn
+    const selectedEnrollments = classInfo.enrollments.filter(e => 
+      selectedStudentKeys.includes(e._id)
+    );
+
+    // Unenroll từng sinh viên và gửi thông báo
+    await Promise.all(selectedEnrollments.map(async (enrollment) => {
+      await unenrollStudent(enrollment._id);
+      
+      // Gửi thông báo cho sinh viên
+      await firebaseNotificationService.createNotification(
+        enrollment.student_id.user_id._id,
+        {
+          content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
+          notification_type: "class_unenrolled",
+          reference_type: "class",
+          reference_id: classInfo._id
+        }
       );
+    }));
+
+    message.success(`Unenrolled ${selectedStudentKeys.length} students successfully`);
+    
+    // Refresh lại dữ liệu lớp học
+    const response = await getClassById(id);
+    setClassInfo(response);
+    setSelectedStudentKeys([]);
+  } catch (error) {
+    message.error("Error unenrolling students");
+  }
+}, [selectedStudentKeys, id, classInfo]);
+
+const handleRemoveTutor = useCallback(
+  async (tutorId) => {
+    try {
+      // Tìm thông tin tutor trước khi xóa
+      const tutorRecord = classInfo.tutors.find(t => t._id === tutorId);
+      if (!tutorRecord) {
+        throw new Error("Tutor record not found");
+      }
+
+      // Xóa tutor khỏi lớp
+      await removeTutor(tutorId);
+      
+      // Gửi thông báo cho tutor
+      await firebaseNotificationService.createNotification(
+        tutorRecord.tutor_id.user_id._id, // user_id của tutor
+        {
+          content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
+          notification_type: "class_unenrolled",
+          reference_type: "class",
+          reference_id: classInfo._id
+        }
+      );
+      
+      message.success("Tutor removed successfully");
+      
+      // Refresh lại dữ liệu lớp học
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedTutorKeys([]);
     } catch (error) {
-      message.error("Error removing tutors");
+      message.error(error.response?.data?.error || "Error removing tutor");
     }
-  }, [selectedTutorKeys, id]);
+  },
+  [id, classInfo]
+);
+
+const handleBulkRemoveTutors = useCallback(async () => {
+  try {
+    // Lấy danh sách các tutor record được chọn
+    const selectedTutorRecords = classInfo.tutors.filter(t => 
+      selectedTutorKeys.includes(t._id)
+    );
+
+    // Xóa từng tutor và gửi thông báo
+    await Promise.all(selectedTutorRecords.map(async (tutorRecord) => {
+      await removeTutor(tutorRecord._id);
+      
+      // Gửi thông báo cho tutor
+      await firebaseNotificationService.createNotification(
+        tutorRecord.tutor_id.user_id._id,
+        {
+          content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
+          notification_type: "class_unenrolled",
+          reference_type: "class",
+          reference_id: classInfo._id
+        }
+      );
+    }));
+
+    message.success(`Removed ${selectedTutorKeys.length} tutors successfully`);
+    
+    // Refresh lại dữ liệu lớp học
+    const response = await getClassById(id);
+    setClassInfo(response);
+    setSelectedTutorKeys([]);
+  } catch (error) {
+    message.error("Error removing tutors");
+  }
+}, [selectedTutorKeys, id, classInfo]);
 
   const handleDeleteSchedule = async (scheduleId) => {
     try {

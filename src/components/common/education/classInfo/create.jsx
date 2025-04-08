@@ -22,6 +22,7 @@ import { getAllStudents } from "../../../../api/organization/student";
 import { getAllTutors } from "../../../../api/organization/tutor";
 import { assignTutor } from "../../../../api/education/classTutor";
 import { enrollStudent } from "../../../../api/education/enrollment";
+import firebaseNotificationService from "../../../../api/firebaseNotification";
 import moment from "moment";
 
 const CreateClass = ({ basePath, customPermissions }) => {
@@ -78,6 +79,7 @@ const CreateClass = ({ basePath, customPermissions }) => {
 
         setStudents(studentsData.map(student => ({
           key: student._id,
+          user_id: student.user_id?._id,
           title: `${student.student_code} - ${student.user_id?.first_name} ${student.user_id?.last_name}`,
           department: student.department_id?._id || student.department_id,
           description: student.student_code,
@@ -85,6 +87,7 @@ const CreateClass = ({ basePath, customPermissions }) => {
 
         setTutors(tutorsData.map(tutor => ({
           key: tutor._id,
+          user_id: tutor.user_id?._id,
           title: `${tutor.tutor_code} - ${tutor.user_id?.first_name} ${tutor.user_id?.last_name}`,
           department: tutor.department_id?._id || tutor.department_id,
           description: tutor.tutor_code,
@@ -176,16 +179,17 @@ const CreateClass = ({ basePath, customPermissions }) => {
         start_date: moment(submitData.start_date).startOf('day').toISOString(),
         end_date: moment(submitData.end_date).startOf('day').toISOString()
       };
-
+  
       const newClass = await createClass(formattedValues);
       
       if (!newClass?._id) {
         throw new Error('Failed to create class: No class ID returned');
       }
-
+  
       const classId = newClass._id;
-
-      // Assign tutors
+      const className = `${submitData.code} - ${courses.find(c => c._id === submitData.course_id)?.name}`;
+  
+      // Assign tutors và tạo notifications
       for (const tutorId of selectedTutors) {
         try {
           await assignTutor({
@@ -193,21 +197,60 @@ const CreateClass = ({ basePath, customPermissions }) => {
             tutor_id: tutorId,
             is_primary: tutorId === primaryTutor
           });
+      
+          // Lấy thông tin tutor để có user_id
+          const tutorData = tutors.find(t => t.key === tutorId);
+          if (tutorData && tutorData.user_id) {
+            const notificationContent = tutorId === primaryTutor
+              ? `You are the main tutor for ${className}`
+              : `You are a tutor for ${className}`;
+      
+            await firebaseNotificationService.createNotification(
+              tutorData.user_id,  // Sử dụng user_id thay vì tutor_id
+              {
+                content: notificationContent,
+                notification_type: 'class_enrolled',
+                reference_type: 'class',
+                reference_id: classId,
+                created_at: Date.now(),
+                updated_at: Date.now(),
+                is_read: false
+              }
+            );
+          }
         } catch (error) {
           message.warning(`Failed to assign tutor: ${error.response?.data?.error || error.message}`);
         }
       }
-
-      // Enroll students
+  
+      // Enroll students và tạo notifications
       let enrollmentSuccess = 0;
       let enrollmentErrors = [];
-
+  
       for (const studentId of selectedStudents) {
         try {
           await enrollStudent({
             classInfo_id: classId,
             student_id: studentId
           });
+      
+          // Lấy thông tin student để có user_id
+          const studentData = students.find(s => s.key === studentId);
+          if (studentData && studentData.user_id) {
+            await firebaseNotificationService.createNotification(
+              studentData.user_id,
+              {
+                content: `You enrolled in ${className}`,
+                notification_type: 'class_enrolled',
+                reference_type: 'class',
+                reference_id: classId,
+                created_at: Date.now(),
+                updated_at: Date.now(),
+                is_read: false
+              }
+            );
+          }
+      
           enrollmentSuccess++;
         } catch (error) {
           enrollmentErrors.push({
