@@ -201,7 +201,18 @@ const Message = () => {
         }
 
         const validConversations = conversationsData
-          .filter((conv) => conv && conv.user1_id && conv.user2_id)
+          .filter((conv) => {
+            // Thêm kiểm tra chi tiết hơn
+            return (
+              conv &&
+              conv.user1_id &&
+              conv.user2_id &&
+              conv.user1_id._id &&
+              conv.user2_id._id &&
+              typeof conv.user1_id._id === "string" &&
+              typeof conv.user2_id._id === "string"
+            );
+          })
           .filter(
             (conv, index, self) =>
               index === self.findIndex((c) => c._id === conv._id)
@@ -213,26 +224,31 @@ const Message = () => {
 
         // Đăng ký lắng nghe tin nhắn cho mỗi cuộc hội thoại
         validConversations.forEach((conv) => {
+          if (!conv || !conv._id) {
+            console.error("Invalid conversation object:", conv);
+            return;
+          }
+
           firebaseChatService.subscribeToMessages(conv._id, (messages) => {
-            if (messages) {
-              const unreadCount = Object.values(messages).filter(
-                (msg) => !msg.is_read && msg.sender_id !== user._id
-              ).length;
+            if (!messages) return;
 
-              setUnreadCounts((prev) => ({
-                ...prev,
-                [conv._id]: unreadCount,
-              }));
+            const unreadCount = Object.values(messages).filter(
+              (msg) => msg && !msg.is_read && msg.sender_id !== user._id
+            ).length;
 
-              if (unreadCount > 0) {
-                setUnreadConversations((prev) => new Set([...prev, conv._id]));
-              } else {
-                setUnreadConversations((prev) => {
-                  const newSet = new Set(prev);
-                  newSet.delete(conv._id);
-                  return newSet;
-                });
-              }
+            setUnreadCounts((prev) => ({
+              ...prev,
+              [conv._id]: unreadCount,
+            }));
+
+            if (unreadCount > 0) {
+              setUnreadConversations((prev) => new Set([...prev, conv._id]));
+            } else {
+              setUnreadConversations((prev) => {
+                const newSet = new Set(prev);
+                newSet.delete(conv._id);
+                return newSet;
+              });
             }
           });
         });
@@ -249,7 +265,9 @@ const Message = () => {
 
   // Subscribe to current conversation messages
   useEffect(() => {
-    if (!currentConversation?._id) return;
+    if (!currentConversation?.user1_id?._id || !currentConversation?.user2_id?._id || !currentConversation?._id) {
+      return;
+    }
 
     // QUAN TRỌNG: Hủy bỏ các subscription trước đó
     Object.values(unsubscribeRefs.current).forEach((unsubscribe) => {
@@ -257,10 +275,6 @@ const Message = () => {
         unsubscribe();
       }
     });
-
-    console.log(
-      `Setting up subscription for conversation: ${currentConversation._id}`
-    );
 
     const unsubscribeMessages = firebaseChatService.subscribeToMessages(
       currentConversation._id,
@@ -524,8 +538,8 @@ const Message = () => {
    * Updates the typing status of the current user
    */
   const handleTyping = () => {
-    if (!currentConversation) return;
-
+    if (!currentConversation?._id) return; // Thêm optional chaining
+  
     const typingData = {
       userId: user._id,
       isTyping: true,
@@ -533,17 +547,18 @@ const Message = () => {
       first_name: user.first_name || "",
       last_name: user.last_name || "",
     };
-
+  
     // Gửi trạng thái typing đến Firebase
     firebaseChatService.updateTypingStatus(currentConversation._id, typingData);
-
+  
     // Clear timeout hiện tại nếu có
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-
+  
     // Set timeout để tắt trạng thái typing sau 2 giây
     typingTimeoutRef.current = setTimeout(() => {
+      if (!currentConversation?._id) return; // Thêm kiểm tra ở đây nữa
       firebaseChatService.updateTypingStatus(currentConversation._id, {
         ...typingData,
         isTyping: false,
@@ -714,18 +729,20 @@ const Message = () => {
    * @returns {JSX.Element|null} - Typing indicator component
    */
   const renderTypingIndicator = (conversation) => {
+    if (!conversation?.user1_id?._id || !conversation?.user2_id?._id) return null;
+  
     const otherUserId =
       conversation.user1_id._id === user._id
         ? conversation.user2_id._id
         : conversation.user1_id._id;
-
+  
     const typingInfo = typingUsers.get(otherUserId);
-
+  
     if (typingInfo && typingInfo.conversationId === conversation._id) {
       const typingName = typingInfo.first_name
         ? `${typingInfo.first_name} ${typingInfo.last_name || ""}`
         : "Someone";
-
+  
       return (
         <Text type="secondary" italic style={{ fontSize: "12px" }}>
           {typingName} is typing...
@@ -740,15 +757,15 @@ const Message = () => {
    * @param {Object} typingData - Typing status data
    */
   const handleTypingStatus = (typingData) => {
-    if (!typingData) return;
-
+    if (!typingData || !currentConversation?._id) return;
+  
     const typingUsers = Array.isArray(typingData)
       ? typingData
       : Object.values(typingData);
-
+  
     setTypingUsers((prev) => {
       const newMap = new Map();
-
+  
       typingUsers.forEach((data) => {
         if (data && data.userId && data.isTyping && data.userId !== user._id) {
           newMap.set(data.userId, {
@@ -758,7 +775,7 @@ const Message = () => {
           });
         }
       });
-
+  
       return newMap;
     });
   };
@@ -1577,20 +1594,16 @@ const Message = () => {
                   dataSource={conversations}
                   locale={{ emptyText: "No conversations" }}
                   renderItem={(conversation) => {
-                    if (
-                      !conversation ||
-                      !conversation.user1_id ||
-                      !conversation.user2_id
-                    ) {
+                    if (!conversation?._id || !conversation?.user1_id?._id || !conversation?.user2_id?._id) {
                       return null;
                     }
 
                     const otherUser =
-                      conversation.user1_id._id === user._id
-                        ? conversation.user2_id
-                        : conversation.user1_id;
+                    conversation.user1_id._id === user._id
+                      ? conversation.user2_id
+                      : conversation.user1_id;
 
-                    if (!otherUser) {
+                    if (!otherUser?._id) {
                       return null;
                     }
 
