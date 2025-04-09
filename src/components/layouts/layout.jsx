@@ -74,7 +74,7 @@ const AppLayout = ({ children, title }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Xác định basePath dựa trên role của user
+  // Determine basePath based on user role
   const basePath = useMemo(() => {
     switch (user?.role) {
       case "admin":
@@ -90,7 +90,7 @@ const AppLayout = ({ children, title }) => {
     }
   }, [user?.role]);
 
-  // Xác định permissions dựa trên role của user
+  // Determine permissions based on user role
   const permissions = useMemo(() => {
     switch (user?.role) {
       case "admin":
@@ -285,7 +285,7 @@ const AppLayout = ({ children, title }) => {
         const [usersResponse, classesResponse, coursesResponse] =
           await Promise.all([getAllUsers(), getAllClasses(), getAllCourses()]);
 
-        // Lấy mảng users từ response
+        // Get users array from response
         const usersData = usersResponse.users || [];
         const classesData = classesResponse || [];
         const coursesData = coursesResponse || [];
@@ -312,12 +312,11 @@ const AppLayout = ({ children, title }) => {
         firebaseNotificationService.subscribeToNotifications(
           user._id,
           (notifs) => {
-            // Chỉ lấy các notification hợp lệ (key không phải số)
+            // Only get valid notifications (keys that don't start with numbers)
             const validNotifications = notifs.filter(
-              (notification) => notification._id.startsWith("-") // Firebase auto-generated ID bắt đầu bằng '-'
+              (notification) => notification._id.startsWith("-") // Firebase auto-generated ID starts with '-'
             );
 
-            console.log("Valid notifications:", validNotifications);
             setNotifications(validNotifications);
             setNotificationLoading(false);
           }
@@ -327,7 +326,7 @@ const AppLayout = ({ children, title }) => {
         firebaseNotificationService.subscribeToUnreadCount(
           user._id,
           (count) => {
-            // Chỉ đếm các notification hợp lệ
+            // Only count valid notifications
             const validCount = count;
             setNotificationCount(validCount);
           }
@@ -363,23 +362,27 @@ const AppLayout = ({ children, title }) => {
 
   const handleNotificationClick = async (notification) => {
     try {
-      // Kiểm tra xem notification có tồn tại và chưa được đọc
+      // Check if notification exists and is not read
       if (notification && notification._id && !notification.is_read) {
-        console.log("Marking notification as read:", notification._id);
-
-        // Đóng popover trước khi thực hiện update
+        // Close popover before performing update
         setNotificationVisible(false);
 
-        // Cập nhật trạng thái đã đọc
+        // Update read status
         await firebaseNotificationService.markAsRead(
           user._id,
           notification._id
         );
 
-        // Thực hiện navigation nếu có
+        // Perform navigation if it exists
         if (notification.reference_type && notification.reference_id) {
           switch (notification.reference_type) {
             case "class":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            case "material":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            case "assignment":
               navigate(`${basePath}/classInfo/${notification.reference_id}`);
               break;
             default:
@@ -387,11 +390,17 @@ const AppLayout = ({ children, title }) => {
           }
         }
       } else {
-        // Nếu notification đã được đọc, chỉ cần đóng popover và navigate
+        // If notification is read, just close popover and navigate
         setNotificationVisible(false);
         if (notification.reference_type && notification.reference_id) {
           switch (notification.reference_type) {
             case "class":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            case "material":
+              navigate(`${basePath}/classInfo/${notification.reference_id}`);
+              break;
+            case "assignment":
               navigate(`${basePath}/classInfo/${notification.reference_id}`);
               break;
             default:
@@ -401,7 +410,7 @@ const AppLayout = ({ children, title }) => {
       }
     } catch (error) {
       console.error("Error handling notification click:", error);
-      message.error("Có lỗi xảy ra khi cập nhật thông báo");
+      message.error("An error occurred when updating the notification");
     }
   };
 
@@ -476,18 +485,24 @@ const AppLayout = ({ children, title }) => {
                           color={
                             notification.notification_type === "class_enrolled"
                               ? "green"
-                              : notification.notification_type ===
-                                "class_unenrolled"
+                              : notification.notification_type === "class_unenrolled"
                               ? "red"
-                              : "blue"
+                              : notification.notification_type === "material" 
+                              ? "blue"
+                              : notification.notification_type === "assignment"
+                              ? "orange"
+                              : "purple"
                           }
                           style={{ marginLeft: 8 }}
                         >
                           {notification.notification_type === "class_enrolled"
                             ? "Enrolled"
-                            : notification.notification_type ===
-                              "class_unenrolled"
+                            : notification.notification_type === "class_unenrolled"
                             ? "Unenrolled"
+                            : notification.notification_type === "material"
+                            ? "Material"
+                            : notification.notification_type === "assignment"
+                            ? "Assignment"
                             : "General"}
                         </Tag>
                       )}
@@ -598,7 +613,7 @@ const AppLayout = ({ children, title }) => {
     if (value && isDataLoaded) {
       const searchLower = value.toLowerCase();
 
-      // Lọc users dựa trên role của người dùng hiện tại
+      // Filter users based on current user's role
       let matchedUsers = users.filter(
         (user) =>
           user &&
@@ -609,18 +624,18 @@ const AppLayout = ({ children, title }) => {
             user.username.toLowerCase().includes(searchLower))
       );
 
-      // Lọc kết quả dựa trên role của người dùng hiện tại
+      // Filter results based on current user's role
       switch (user?.role) {
         case "admin":
         case "staff":
-          // Admin và staff có thể thấy tất cả users
+          // Admin and staff can see all users
           break;
         case "tutor":
-          // Tutor không thể thấy admin
+          // Tutor cannot see admin
           matchedUsers = matchedUsers.filter((u) => u.role !== "admin");
           break;
         case "student":
-          // Student chỉ có thể thấy tutor và student khác
+          // Student can only see tutor and other students
           matchedUsers = matchedUsers.filter(
             (u) => u.role === "tutor" || u.role === "student"
           );
@@ -631,7 +646,7 @@ const AppLayout = ({ children, title }) => {
 
       matchedUsers = matchedUsers.slice(0, 5);
 
-      // Tìm kiếm classes và courses như cũ
+      // Search classes and courses as before
       const matchedClasses = classes
         .filter(
           (cls) =>
@@ -654,7 +669,7 @@ const AppLayout = ({ children, title }) => {
 
       const options = [];
 
-      // Thêm users nếu có kết quả
+      // Add users if there are results
       if (matchedUsers.length > 0) {
         options.push({
           label: (
@@ -708,7 +723,7 @@ const AppLayout = ({ children, title }) => {
         });
       }
 
-      // Thêm classes nếu có kết quả
+      // Add classes if there are results
       if (matchedClasses.length > 0) {
         if (options.length > 0) {
           options.push({
@@ -749,7 +764,7 @@ const AppLayout = ({ children, title }) => {
         });
       }
 
-      // Thêm courses nếu có kết quả
+      // Add courses if there are results
       if (matchedCourses.length > 0) {
         if (options.length > 0) {
           options.push({
@@ -973,7 +988,7 @@ const AppLayout = ({ children, title }) => {
                 />
               )}
 
-              {/* Notifications - Sửa lại vị trí Badge */}
+              {/* Notifications - Badge */}
               <Popover
                 content={notificationContent}
                 trigger="click"

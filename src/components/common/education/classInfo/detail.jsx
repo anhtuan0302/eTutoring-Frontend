@@ -81,61 +81,10 @@ import { staticURL } from "../../../../api/config";
 const { Title, Text } = Typography;
 
 // Material Modal Component
-const MaterialModal = ({ 
-  isVisible, 
-  onCancel, 
-  classId,
-  onSuccess 
-}) => {
+const MaterialModal = ({ isVisible, onCancel, classId, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
-
-  const handleSubmit = async (values) => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('classInfo_id', classId);
-      formData.append('title', values.title);
-      formData.append('description', values.description || '');
-      formData.append('content_type', 'material');
-      
-      // Append all files - using the correct file property from antd Upload component
-      fileList.forEach((file, index) => {
-        console.log(`File ${index}:`, file);
-        
-        // Get the right file object - antd Upload adds the original file in originFileObj
-        const fileObj = file.originFileObj || file;
-        
-        if (fileObj && fileObj instanceof File) {
-          formData.append('files', fileObj);
-          console.log(`Appended file ${index} to FormData: ${fileObj.name}`);
-        } else {
-          console.warn(`File ${index} is not a valid File object`, fileObj);
-        }
-      });
-
-      // Log final FormData entries
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
-      
-      const response = await createClassContent(formData);
-      console.log('Upload response:', response);
-      message.success('Thêm tài liệu thành công');
-      onSuccess();
-      onCancel();
-      // Reset form and file list
-      form.resetFields();
-      setFileList([]);
-    } catch (error) {
-      console.error('Upload error:', error);
-      message.error('Thêm tài liệu thất bại: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const uploadProps = {
     onRemove: (file) => {
@@ -145,51 +94,108 @@ const MaterialModal = ({
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      console.log('Before upload file:', file);
-      setFileList(prev => [...prev, file]);
+      setFileList([...fileList, file]);
       return false;
     },
-    onChange: ({ fileList: newFileList }) => {
-      console.log('onChange fileList:', newFileList);
-      setFileList(newFileList);
-    },
-    customRequest: ({ file, onSuccess }) => {
-      console.log('Custom request file:', file);
-      setTimeout(() => {
-        onSuccess("ok");
-      }, 0);
-    },
     fileList,
-    multiple: true,
-    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.webm'
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('classInfo_id', classId);
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      formData.append('content_type', 'material');
+
+      fileList.forEach((file, index) => {
+        formData.append(`files`, file.originFileObj || file);
+      });
+
+      await createClassContent(formData);
+      message.success('Material added successfully');
+      form.resetFields();
+      setFileList([]);
+      
+      // Send notifications to all students enrolled in the class
+      try {
+        const classData = await getClassById(classId);
+        if (classData && classData.enrollments && classData.enrollments.length > 0) {
+          // Create notifications for each enrolled student
+          const notificationPromises = classData.enrollments.map(enrollment => 
+            firebaseNotificationService.createNotification(
+              enrollment.student_id.user_id._id,
+              {
+                content: `A new material "${values.title}" has been added to class ${classData.code} - ${classData.course_id?.name}`,
+                notification_type: "material",
+                reference_type: "material",
+                reference_id: classId
+              }
+            )
+          );
+          
+          await Promise.all(notificationPromises);
+          message.success('Added material and sent notifications to all students');
+        } else {
+          message.success('Added material successfully');
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications:', notificationError);
+        message.success('Added material successfully, but failed to send notifications');
+      }
+      
+      onSuccess();
+      onCancel();
+      // Reset form and file list
+      form.resetFields();
+      setFileList([]);
+    } catch (error) {
+      console.error('Upload error:', error);
+      message.error('Failed to add material: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Modal
-      title="Thêm tài liệu"
+      title="Add Material"
       open={isVisible}
       onCancel={onCancel}
       footer={null}
+      destroyOnClose
     >
-      <Form form={form} onFinish={handleSubmit} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="title"
-          label="Tiêu đề"
-          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+          label="Title"
+          rules={[{ required: true, message: 'Please enter a title' }]}
         >
-          <Input />
+          <Input placeholder="Enter title" />
         </Form.Item>
-        <Form.Item name="description" label="Mô tả">
-          <Input.TextArea />
+        <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Please enter a description' }]}>
+          <Input.TextArea placeholder="Enter description" rows={4} />
         </Form.Item>
-        <Form.Item label="Tệp đính kèm">
-          <Upload {...uploadProps}>
-            <Button icon={<UploadOutlined />}>Chọn tệp</Button>
+        <Form.Item
+          name="attachments"
+          label="Attachments"
+        >
+          <Upload {...uploadProps} multiple accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*">
+            <Button icon={<UploadOutlined />}>Select Files</Button>
+            <div style={{ marginTop: 8 }}>
+              Supported file types: Images, PDFs, Word documents, Videos
+            </div>
           </Upload>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Thêm
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            block
+          >
+            Add Material
           </Button>
         </Form.Item>
       </Form>
@@ -198,59 +204,10 @@ const MaterialModal = ({
 };
 
 // Assignment Modal Component
-const AssignmentModal = ({ 
-  isVisible, 
-  onCancel, 
-  classId,
-  onSuccess 
-}) => {
+const AssignmentModal = ({ isVisible, onCancel, classId, onSuccess }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [fileList, setFileList] = useState([]);
-
-  const handleSubmit = async (values) => {
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('classInfo_id', classId);
-      formData.append('title', values.title);
-      formData.append('description', values.description || '');
-      formData.append('content_type', 'assignment');
-      formData.append('duedate', values.duedate.format('YYYY-MM-DD HH:mm:ss'));
-      
-      // Append all files - using the correct file property from antd Upload component
-      fileList.forEach((file, index) => {
-        console.log(`File ${index}:`, file);
-        
-        // Get the right file object - antd Upload adds the original file in originFileObj
-        const fileObj = file.originFileObj || file;
-        
-        if (fileObj && fileObj instanceof File) {
-          formData.append('files', fileObj);
-          console.log(`Appended file ${index} to FormData: ${fileObj.name}`);
-        } else {
-          console.warn(`File ${index} is not a valid File object`, fileObj);
-        }
-      });
-
-      // Log final FormData entries
-      console.log('FormData entries:');
-      for (let [key, value] of formData.entries()) {
-        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
-      }
-      
-      const response = await createClassContent(formData);
-      console.log('Upload response:', response);
-      message.success('Thêm bài tập thành công');
-      onSuccess();
-      onCancel();
-    } catch (error) {
-      console.error('Upload error:', error);
-      message.error('Thêm bài tập thất bại: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const uploadProps = {
     onRemove: (file) => {
@@ -260,58 +217,124 @@ const AssignmentModal = ({
       setFileList(newFileList);
     },
     beforeUpload: (file) => {
-      console.log('Before upload file:', file);
-      setFileList(prev => [...prev, file]);
+      setFileList([...fileList, file]);
       return false;
     },
-    onChange: ({ fileList: newFileList }) => {
-      console.log('onChange fileList:', newFileList);
-      setFileList(newFileList);
-    },
-    customRequest: ({ file, onSuccess }) => {
-      console.log('Custom request file:', file);
-      setTimeout(() => {
-        onSuccess("ok");
-      }, 0);
-    },
     fileList,
-    multiple: true,
-    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.webm'
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('classInfo_id', classId);
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      formData.append('content_type', 'assignment');
+      formData.append('due_date', values.due_date.toISOString());
+
+      fileList.forEach((file, index) => {
+        formData.append(`files`, file.originFileObj || file);
+      });
+
+      await createClassContent(formData);
+      message.success('Assignment added successfully');
+      form.resetFields();
+      setFileList([]);
+      
+      // Send notifications to all students enrolled in the class
+      try {
+        const classData = await getClassById(classId);
+        if (classData && classData.enrollments && classData.enrollments.length > 0) {
+          // Calculate days until due date for the notification message
+          const dueDate = new Date(values.due_date.toISOString());
+          const today = new Date();
+          const daysUntilDue = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+          
+          // Create notifications for each enrolled student
+          const notificationPromises = classData.enrollments.map(enrollment => 
+            firebaseNotificationService.createNotification(
+              enrollment.student_id.user_id._id,
+              {
+                content: `A new assignment "${values.title}" has been added to class ${classData.code} - ${classData.course_id?.name}. Due in ${daysUntilDue} day(s)!`,
+                notification_type: "assignment",
+                reference_type: "assignment",
+                reference_id: classId
+              }
+            )
+          );
+          
+          await Promise.all(notificationPromises);
+          message.success('Added assignment and sent notifications to all students');
+        } else {
+          message.success('Added assignment successfully');
+        }
+      } catch (notificationError) {
+        console.error('Error sending notifications:', notificationError);
+        message.success('Added assignment successfully, but failed to send notifications');
+      }
+      
+      onSuccess();
+      onCancel();
+      form.resetFields();
+      setFileList([]);
+    } catch (error) {
+      console.error('Upload error:', error);
+      message.error('Failed to add assignment: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Modal
-      title="Thêm bài tập"
+      title="Add Assignment"
       open={isVisible}
       onCancel={onCancel}
       footer={null}
+      destroyOnClose
     >
-      <Form form={form} onFinish={handleSubmit} layout="vertical">
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="title"
-          label="Tiêu đề"
-          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+          label="Title"
+          rules={[{ required: true, message: 'Please enter a title' }]}
         >
-          <Input />
+          <Input placeholder="Enter title" />
         </Form.Item>
-        <Form.Item name="description" label="Mô tả">
-          <Input.TextArea />
+        <Form.Item name="description" label="Description" rules={[{ required: true, message: 'Please enter a description' }]}>
+          <Input.TextArea placeholder="Enter description" rows={4} />
         </Form.Item>
         <Form.Item
-          name="duedate"
-          label="Hạn nộp"
-          rules={[{ required: true, message: 'Vui lòng chọn hạn nộp' }]}
+          name="due_date"
+          label="Due Date"
+          rules={[{ required: true, message: 'Please select a due date' }]}
         >
-          <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
+          <DatePicker
+            showTime
+            format="YYYY-MM-DD HH:mm"
+            style={{ width: '100%' }}
+          />
         </Form.Item>
-        <Form.Item label="Tệp đính kèm">
-          <Upload {...uploadProps}>
-            <Button icon={<UploadOutlined />}>Chọn tệp</Button>
+        <Form.Item
+          name="attachments"
+          label="Attachments"
+        >
+          <Upload {...uploadProps} multiple accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*">
+            <Button icon={<UploadOutlined />}>Select Files</Button>
+            <div style={{ marginTop: 8 }}>
+              Supported file types: Images, PDFs, Word documents, Videos
+            </div>
           </Upload>
         </Form.Item>
         <Form.Item>
-          <Button type="primary" htmlType="submit" loading={loading}>
-            Thêm
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            block
+          >
+            Add Assignment
           </Button>
         </Form.Item>
       </Form>
@@ -356,7 +379,21 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   const [assignmentModalVisible, setAssignmentModalVisible] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Xác định basePath dựa theo role
+  // Function to refresh class data
+  const refreshClassData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await getClassById(id);
+      setClassInfo(response);
+    } catch (error) {
+      message.error("Failed to refresh class details");
+      console.error("Error fetching class:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  // Determine basePath based on role
   const effectiveBasePath = useMemo(() => {
     if (basePath) return basePath;
 
@@ -374,7 +411,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   }, [basePath, user?.role]);
 
-  // Xác định permissions dựa vào role
+  // Determine permissions based on role
   const permissions = useMemo(() => {
     if (customPermissions) return customPermissions;
 
@@ -458,7 +495,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     fetchClassDetail();
   }, [id]);
 
-  // Thêm useEffect để load attendance stats
+  // Add useEffect to load attendance stats
   useEffect(() => {
     const loadAttendanceStats = async () => {
       if (!classInfo?.enrollments) return;
@@ -483,7 +520,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     loadAttendanceStats();
   }, [classInfo]);
 
-  // Cập nhật hàm tính tỷ lệ vắng mặt
+  // Update the absent rate calculation function
   const calculateAbsentRate = useCallback(
     (studentId) => {
       const stats = attendanceStats[studentId];
@@ -506,7 +543,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   };
 
-  // Tính toán các thống kê
+  // Calculate statistics
   const statistics = useMemo(() => {
     if (!classInfo) return null;
 
@@ -514,14 +551,14 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     const tutors = classInfo.tutors || [];
     const schedules = classInfo.schedules || [];
 
-    // Tính toán điểm số từ submissions
+    // Calculate grades from submissions
     const allGrades = [];
-    const studentAverages = new Map(); // Map để lưu điểm trung bình của mỗi sinh viên
+    const studentAverages = new Map(); // Map to store average grades for each student
 
-    // Duyệt qua tất cả assignments
+    // Iterate through all assignments
     classInfo.contents?.forEach(content => {
       if (content.content_type === 'assignment') {
-        // Lấy tất cả submissions của assignment này
+        // Get all submissions for this assignment
         const submissions = Object.values(allSubmissions)
           .flat()
           .filter(sub => 
@@ -529,7 +566,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             sub.grade?.score != null
           );
 
-        // Cập nhật điểm số cho từng sinh viên
+        // Update the grade for each student
         submissions.forEach(submission => {
           const studentId = submission.student_id?._id;
           if (studentId) {
@@ -541,7 +578,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       }
     });
 
-    // Tính điểm trung bình cho mỗi sinh viên
+    // Calculate the average grade for each student
     studentAverages.forEach((grades) => {
       if (grades.length > 0) {
         const average = grades.reduce((a, b) => a + b, 0) / grades.length;
@@ -561,7 +598,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         average_grade: allGrades.length 
           ? allGrades.reduce((a, b) => a + b, 0) / allGrades.length 
           : 0,
-        graded_students: allGrades.length // Số sinh viên đã có điểm
+        graded_students: allGrades.length // Number of students with grades
       },
     };
   }, [classInfo, allSubmissions]);
@@ -569,7 +606,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   const handleUnenrollStudent = useCallback(
     async (enrollmentId) => {
       try {
-        // Tìm thông tin enrollment trước khi unenroll
+        // Find enrollment information before unenrolling
         const enrollment = classInfo.enrollments.find(
           (e) => e._id === enrollmentId
         );
@@ -577,12 +614,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           throw new Error("Enrollment not found");
         }
 
-        // Unenroll sinh viên
+        // Unenroll student
         await unenrollStudent(enrollmentId);
 
-        // Gửi thông báo cho sinh viên
+        // Send notification to student
         await firebaseNotificationService.createNotification(
-          enrollment.student_id.user_id._id, // user_id của sinh viên
+          enrollment.student_id.user_id._id, // user_id of the student
           {
             content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
             notification_type: "class_unenrolled",
@@ -593,7 +630,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
         message.success("Student unenrolled successfully");
 
-        // Refresh lại dữ liệu lớp học
+        // Refresh the class data
         const response = await getClassById(id);
         setClassInfo(response);
         setSelectedStudentKeys([]);
@@ -608,17 +645,17 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
   const handleBulkUnenroll = useCallback(async () => {
     try {
-      // Lấy danh sách các enrollment được chọn
+      // Get the list of selected enrollments
       const selectedEnrollments = classInfo.enrollments.filter((e) =>
         selectedStudentKeys.includes(e._id)
       );
 
-      // Unenroll từng sinh viên và gửi thông báo
+      // Unenroll each student and send notification
       await Promise.all(
         selectedEnrollments.map(async (enrollment) => {
           await unenrollStudent(enrollment._id);
 
-          // Gửi thông báo cho sinh viên
+          // Send notification to student
           await firebaseNotificationService.createNotification(
             enrollment.student_id.user_id._id,
             {
@@ -635,7 +672,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         `Unenrolled ${selectedStudentKeys.length} students successfully`
       );
 
-      // Refresh lại dữ liệu lớp học
+      // Refresh the class data
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedStudentKeys([]);
@@ -647,18 +684,18 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   const handleRemoveTutor = useCallback(
     async (tutorId) => {
       try {
-        // Tìm thông tin tutor trước khi xóa
+        // Find tutor information before deleting
         const tutorRecord = classInfo.tutors.find((t) => t._id === tutorId);
         if (!tutorRecord) {
           throw new Error("Tutor record not found");
         }
 
-        // Xóa tutor khỏi lớp
+        // Remove tutor from class
         await removeTutor(tutorId);
 
-        // Gửi thông báo cho tutor
+        // Send notification to tutor
         await firebaseNotificationService.createNotification(
-          tutorRecord.tutor_id.user_id._id, // user_id của tutor
+          tutorRecord.tutor_id.user_id._id, // user_id of the tutor
           {
             content: `You unenrolled from ${classInfo.code} - ${classInfo.course_id?.name}`,
             notification_type: "class_unenrolled",
@@ -669,7 +706,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
         message.success("Tutor removed successfully");
 
-        // Refresh lại dữ liệu lớp học
+        // Refresh the class data
         const response = await getClassById(id);
         setClassInfo(response);
         setSelectedTutorKeys([]);
@@ -682,17 +719,17 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
   const handleBulkRemoveTutors = useCallback(async () => {
     try {
-      // Lấy danh sách các tutor record được chọn
+      // Get the list of selected tutor records
       const selectedTutorRecords = classInfo.tutors.filter((t) =>
         selectedTutorKeys.includes(t._id)
       );
 
-      // Xóa từng tutor và gửi thông báo
+      // Remove each tutor and send notification
       await Promise.all(
         selectedTutorRecords.map(async (tutorRecord) => {
           await removeTutor(tutorRecord._id);
 
-          // Gửi thông báo cho tutor
+          // Send notification to tutor
           await firebaseNotificationService.createNotification(
             tutorRecord.tutor_id.user_id._id,
             {
@@ -709,7 +746,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         `Removed ${selectedTutorKeys.length} tutors successfully`
       );
 
-      // Refresh lại dữ liệu lớp học
+      // Refresh the class data
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedTutorKeys([]);
@@ -722,7 +759,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     try {
       await deleteSchedule(scheduleId);
       message.success("Schedule deleted successfully");
-      // Refresh lại data
+      // Refresh the class data
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedScheduleKeys([]);
@@ -737,7 +774,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       message.success(
         `Deleted ${selectedScheduleKeys.length} schedules successfully`
       );
-      // Refresh lại data
+      // Refresh the class data
       const response = await getClassById(id);
       setClassInfo(response);
       setSelectedScheduleKeys([]);
@@ -772,14 +809,14 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             const response = await getSubmissionsByAssignment(assignment._id);
 
 
-            // Nếu response là một object (không phải null)
+            // If response is an object (not null)
             if (response && typeof response === "object") {
-              // Kiểm tra xem response có phải là submission object không
+              // Check if response is a submission object
               if (response._id && response.assignment_id) {
-                // Trường hợp API trả về submission trực tiếp
+                // Case where API returns submission directly
                 submissionsData[assignment._id] = response;
               } else if (response.data) {
-                // Trường hợp API trả về wrapped object với data
+                // Case where API returns wrapped object with data
                 submissionsData[assignment._id] = response.data;
               }
             } else {
@@ -806,7 +843,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   }, [assignments]);
 
-  // Thêm hàm để lấy tất cả submissions
+  // Add function to get all submissions
   const loadAllSubmissions = useCallback(async () => {
     try {
       setLoadingSubmissions(true);
@@ -816,12 +853,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         try {
           const response = await getSubmissionsByAssignment(assignment._id);
           if (response?.data) {
-            // Đảm bảo mỗi submission có thông tin sinh viên và assignment
+            // Ensure each submission has student and assignment information
             submissionsData[assignment._id] = response.data.map(
               (submission) => ({
                 ...submission,
                 assignment_id: {
-                  _id: assignment._id, // Đảm bảo gán đúng assignment_id
+                  _id: assignment._id, // Ensure the correct assignment_id is assigned
                   title: assignment.title,
                 },
               })
@@ -843,11 +880,11 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   }, [assignments]);
 
-  // Thêm hàm để lọc submissions
+  // Add function to filter submissions
   const filteredSubmissions = useMemo(() => {
     const allSubs = Object.values(allSubmissions).flat();
 
-    // Lọc theo assignment
+    // Filter by assignment
     let filtered = allSubs;
     if (selectedAssignmentFilter !== "all") {
       filtered = filtered.filter((sub) => {
@@ -855,7 +892,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       });
     }
 
-    // Lọc theo tìm kiếm
+    // Filter by search
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter((sub) => {
@@ -871,7 +908,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     return filtered;
   }, [allSubmissions, selectedAssignmentFilter, searchText]);
 
-  // Thêm useEffect để load submissions khi assignments thay đổi
+  // Add useEffect to load submissions when assignments change
   useEffect(() => {
     if (
       assignments.length > 0 &&
@@ -885,7 +922,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   }, [assignments, user, classInfo, loadAllSubmissions]);
 
-  // Hàm format dung lượng file
+  // Function to format file size
   const formatFileSize = (bytes) => {
     if (bytes === 0) return "0 Bytes";
     const k = 1024;
@@ -894,12 +931,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  // Component hiển thị attachments
+  // Component to display attachments
   const AttachmentsList = ({ attachments }) => {
     const [previewVisible, setPreviewVisible] = useState(false);
     const [previewMedia, setPreviewMedia] = useState(null);
 
-    // Hàm kiểm tra loại file
+    // Function to check file type
     const getFileType = (fileName) => {
       const extension = fileName.split(".").pop().toLowerCase();
       if (["jpg", "jpeg", "png", "gif", "webp"].includes(extension))
@@ -909,7 +946,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       return "other";
     };
 
-    // Hàm xử lý preview
+    // Function to handle preview
     const handlePreview = (attachment) => {
       setPreviewMedia(attachment);
       setPreviewVisible(true);
@@ -944,7 +981,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             </audio>
           );
         default:
-          return <Text>Không thể hiển thị trước tệp này.</Text>;
+          return <Text>Cannot preview this file.</Text>;
       }
     };
 
@@ -974,7 +1011,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       }
                       onClick={() => handlePreview(attachment)}
                     >
-                      Xem trước
+                      Preview
                     </Button>
                   ),
                   <Button
@@ -983,7 +1020,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                     href={`${staticURL}/${attachment.file_path}`}
                     target="_blank"
                   >
-                    Tải xuống
+                    Download
                   </Button>,
                 ].filter(Boolean)}
               >
@@ -1023,11 +1060,11 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     );
   };
 
-  // Xử lý gốc cho submission
+  // Handle submission click
   const handleSubmissionClick = async (assignment) => {
     setCurrentSubmission(assignment);
     try {
-      // Lấy submission hiện tại của assignment này nếu có
+      // Get current submission for this assignment if it exists
       const response = await getSubmissionsByAssignment(assignment._id);
       
       if (response && response.data) {
@@ -1036,7 +1073,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           submission: response.data
         });
         
-        // Nếu đã có file đính kèm, hiển thị lên UI
+        // If there are attachments, display them on the UI
         if (response.data.attachments && response.data.attachments.length > 0) {
           const existingFiles = response.data.attachments.map(file => ({
             uid: file._id,
@@ -1051,7 +1088,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           setUploadedFiles([]);
         }
       } else {
-        // Nếu chưa có submission
+        // If there is no submission
         setCurrentSubmission(assignment);
         setUploadedFiles([]);
       }
@@ -1087,7 +1124,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         }
       }
 
-      // Thêm file vào formData
+      // Add file to formData
       const newFile = uploadedFiles[0];
       if (newFile?.originFileObj) {
         formData.append("file", newFile.originFileObj);
@@ -1104,7 +1141,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       if (response?.data) {
         message.success("Submission created successfully");
         
-        // Cập nhật state
+        // Update state
         setAssignmentSubmissions(prev => ({
           ...prev,
           [currentSubmission._id]: response.data
@@ -1113,7 +1150,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         setSubmissionModalVisible(false);
         setUploadedFiles([]);
         
-        // Refresh lại data
+        // Refresh data
         const refreshSubmissions = async () => {
           try {
             const updatedSubmissions = {...assignmentSubmissions};
@@ -1145,7 +1182,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   };
 
-  // Component cho Modal submission
+  // Component for submission modal
   const SubmissionModal = ({
     visible,
     assignment,
@@ -2578,17 +2615,13 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         isVisible={materialModalVisible}
         onCancel={() => setMaterialModalVisible(false)}
         classId={id}
-        onSuccess={() => {
-          // Handle refresh logic
-        }}
+        onSuccess={refreshClassData}
       />
       <AssignmentModal
         isVisible={assignmentModalVisible}
         onCancel={() => setAssignmentModalVisible(false)}
         classId={id}
-        onSuccess={() => {
-          // Handle refresh logic
-        }}
+        onSuccess={refreshClassData}
       />
     </div>
   );
