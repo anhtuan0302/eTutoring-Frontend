@@ -28,7 +28,6 @@ import {
   BookOutlined,
   FileTextOutlined,
   MessageOutlined,
-  BarChartOutlined,
   SettingOutlined,
   HomeOutlined,
   UsergroupAddOutlined,
@@ -39,6 +38,7 @@ import {
   LogoutOutlined,
   CalendarOutlined,
   ContactsOutlined,
+  ApartmentOutlined,
 } from "@ant-design/icons";
 
 import dayjs from "dayjs";
@@ -99,6 +99,7 @@ const AppLayout = ({ children, title }) => {
           canViewCalendar: true,
           canViewPendingUsers: true,
           canViewAllUsers: true,
+          canViewAllDepartments: true,
           canViewClasses: true,
           canViewCourses: true,
           canViewPosts: true,
@@ -112,6 +113,7 @@ const AppLayout = ({ children, title }) => {
           canViewCalendar: true,
           canViewPendingUsers: true,
           canViewAllUsers: true,
+          canViewAllDepartments: true,
           canViewClasses: true,
           canViewCourses: true,
           canViewPosts: true,
@@ -125,6 +127,7 @@ const AppLayout = ({ children, title }) => {
           canViewCalendar: true,
           canViewPendingUsers: false,
           canViewAllUsers: false,
+          canViewAllDepartments: false,
           canViewClasses: true,
           canViewCourses: true,
           canViewPosts: true,
@@ -138,6 +141,7 @@ const AppLayout = ({ children, title }) => {
           canViewCalendar: true,
           canViewPendingUsers: false,
           canViewAllUsers: false,
+          canViewAllDepartments: false,
           canViewClasses: true,
           canViewCourses: true,
           canViewPosts: true,
@@ -151,6 +155,7 @@ const AppLayout = ({ children, title }) => {
           canViewCalendar: false,
           canViewPendingUsers: false,
           canViewAllUsers: false,
+          canViewAllDepartments: false,
           canViewClasses: false,
           canViewCourses: false,
           canViewPosts: false,
@@ -210,36 +215,19 @@ const AppLayout = ({ children, title }) => {
 
     if (permissions.canViewAllUsers) {
       items.push({
-        key: "all-user",
+        key: "allUser",
         icon: <UsergroupAddOutlined />,
         label: "All Users",
-        children: [
-          {
-            key: "admin",
-            label: "Admin",
-            path: `${basePath}/admin`,
-          },
-          {
-            key: "staff",
-            label: "Staff",
-            path: `${basePath}/staff`,
-          },
-          {
-            key: "tutor",
-            label: "Tutor",
-            path: `${basePath}/tutor`,
-          },
-          {
-            key: "student",
-            label: "Student",
-            path: `${basePath}/student`,
-          },
-          {
-            key: "department",
-            label: "Department",
-            path: `${basePath}/department`,
-          },
-        ],
+        path: `${basePath}/user`,
+      });
+    }
+
+    if (permissions.canViewAllDepartments) {
+      items.push({
+        key: "department",
+        icon: <ApartmentOutlined />,
+        label: "Department",
+        path: `${basePath}/department`,
       });
     }
 
@@ -276,41 +264,6 @@ const AppLayout = ({ children, title }) => {
         icon: <MessageOutlined />,
         label: "Message",
         path: `${basePath}/message`,
-      });
-    }
-
-    if (permissions.canViewReports) {
-      items.push({
-        key: "reports",
-        icon: <BarChartOutlined />,
-        label: "Reports & Statistics",
-        children: [
-          {
-            key: "user-reports",
-            label: "User Statistics",
-            path: `${basePath}/reports/users`,
-          },
-          {
-            key: "course-reports",
-            label: "Course Statistics",
-            path: `${basePath}/reports/courses`,
-          },
-          {
-            key: "attendance-reports",
-            label: "Attendance Statistics",
-            path: `${basePath}/reports/attendance`,
-          },
-          {
-            key: "grade-reports",
-            label: "Grade Statistics",
-            path: `${basePath}/reports/grades`,
-          },
-          {
-            key: "account-history",
-            label: "Activity History",
-            path: `${basePath}/reports/activity`,
-          },
-        ],
       });
     }
 
@@ -680,14 +633,15 @@ const AppLayout = ({ children, title }) => {
 
       // Tìm kiếm classes và courses như cũ
       const matchedClasses = classes
-      .filter(
-        (cls) =>
-          cls &&
-          ((cls.code && cls.code.toLowerCase().includes(searchLower)) ||
-           (cls.name && cls.name.toLowerCase().includes(searchLower)) ||
-           (cls.course_id?.name && cls.course_id.name.toLowerCase().includes(searchLower)))
-      )
-      .slice(0, 5);
+        .filter(
+          (cls) =>
+            cls &&
+            ((cls.code && cls.code.toLowerCase().includes(searchLower)) ||
+              (cls.name && cls.name.toLowerCase().includes(searchLower)) ||
+              (cls.course_id?.name &&
+                cls.course_id.name.toLowerCase().includes(searchLower)))
+        )
+        .slice(0, 5);
 
       const matchedCourses = courses
         .filter(
@@ -780,11 +734,13 @@ const AppLayout = ({ children, title }) => {
                 <ContactsOutlined style={{ marginRight: 8 }} />
                 <div style={{ display: "inline-block" }}>
                   <div>
-                    {cls.code || 'N/A'} {cls.name ? `- ${cls.name}` : ''}
+                    {cls.code || "N/A"} {cls.name ? `- ${cls.name}` : ""}
                   </div>
                   <div style={{ fontSize: "12px", color: "#666" }}>
-                    {cls.course_id?.name ? `${cls.course_id.name}` : 'No course'} 
-                    {cls.course_id?.code ? ` (${cls.course_id.code})` : ''}
+                    {cls.course_id?.name
+                      ? `${cls.course_id.name}`
+                      : "No course"}
+                    {cls.course_id?.code ? ` (${cls.course_id.code})` : ""}
                   </div>
                 </div>
               </div>

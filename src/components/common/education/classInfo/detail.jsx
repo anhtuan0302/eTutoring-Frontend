@@ -31,6 +31,7 @@ import {
   InputNumber,
   DatePicker,
   Select,
+  Breadcrumb,
 } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
@@ -72,25 +73,272 @@ import {
   UploadOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import { getStudentAttendance } from "../../../../api/education/attendance";
+import { createClassContent } from "../../../../api/education/classContent";
 
 import { staticURL } from "../../../../api/config";
 
 const { Title, Text } = Typography;
 
+// Material Modal Component
+const MaterialModal = ({ 
+  isVisible, 
+  onCancel, 
+  classId,
+  onSuccess 
+}) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('classInfo_id', classId);
+      formData.append('title', values.title);
+      formData.append('description', values.description || '');
+      formData.append('content_type', 'material');
+      
+      // Append all files - using the correct file property from antd Upload component
+      fileList.forEach((file, index) => {
+        console.log(`File ${index}:`, file);
+        
+        // Get the right file object - antd Upload adds the original file in originFileObj
+        const fileObj = file.originFileObj || file;
+        
+        if (fileObj && fileObj instanceof File) {
+          formData.append('files', fileObj);
+          console.log(`Appended file ${index} to FormData: ${fileObj.name}`);
+        } else {
+          console.warn(`File ${index} is not a valid File object`, fileObj);
+        }
+      });
+
+      // Log final FormData entries
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
+      }
+      
+      const response = await createClassContent(formData);
+      console.log('Upload response:', response);
+      message.success('Thêm tài liệu thành công');
+      onSuccess();
+      onCancel();
+      // Reset form and file list
+      form.resetFields();
+      setFileList([]);
+    } catch (error) {
+      console.error('Upload error:', error);
+      message.error('Thêm tài liệu thất bại: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadProps = {
+    onRemove: (file) => {
+      const index = fileList.indexOf(file);
+      const newFileList = fileList.slice();
+      newFileList.splice(index, 1);
+      setFileList(newFileList);
+    },
+    beforeUpload: (file) => {
+      console.log('Before upload file:', file);
+      setFileList(prev => [...prev, file]);
+      return false;
+    },
+    onChange: ({ fileList: newFileList }) => {
+      console.log('onChange fileList:', newFileList);
+      setFileList(newFileList);
+    },
+    customRequest: ({ file, onSuccess }) => {
+      console.log('Custom request file:', file);
+      setTimeout(() => {
+        onSuccess("ok");
+      }, 0);
+    },
+    fileList,
+    multiple: true,
+    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.webm'
+  };
+
+  return (
+    <Modal
+      title="Thêm tài liệu"
+      open={isVisible}
+      onCancel={onCancel}
+      footer={null}
+    >
+      <Form form={form} onFinish={handleSubmit} layout="vertical">
+        <Form.Item
+          name="title"
+          label="Tiêu đề"
+          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item name="description" label="Mô tả">
+          <Input.TextArea />
+        </Form.Item>
+        <Form.Item label="Tệp đính kèm">
+          <Upload {...uploadProps}>
+            <Button icon={<UploadOutlined />}>Chọn tệp</Button>
+          </Upload>
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            Thêm
+          </Button>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
+// Assignment Modal Component
+const AssignmentModal = ({ 
+  isVisible, 
+  onCancel, 
+  classId,
+  onSuccess 
+}) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('classInfo_id', classId);
+      formData.append('title', values.title);
+      formData.append('description', values.description || '');
+      formData.append('content_type', 'assignment');
+      formData.append('duedate', values.duedate.format('YYYY-MM-DD HH:mm:ss'));
+      
+      // Append all files - using the correct file property from antd Upload component
+      fileList.forEach((file, index) => {
+        console.log(`File ${index}:`, file);
+        
+        // Get the right file object - antd Upload adds the original file in originFileObj
+        const fileObj = file.originFileObj || file;
+        
+        if (fileObj && fileObj instanceof File) {
+          formData.append('files', fileObj);
+          console.log(`Appended file ${index} to FormData: ${fileObj.name}`);
+        } else {
+          console.warn(`File ${index} is not a valid File object`, fileObj);
+        }
+      });
+
+      // Log final FormData entries
+      console.log('FormData entries:');
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}:`, value instanceof File ? `File: ${value.name}` : value);
+      }
+      
+      const response = await createClassContent(formData);
+      console.log('Upload response:', response);
+      message.success('Thêm bài tập thành công');
+      onSuccess();
+      onCancel();
+    } catch (error) {
+      console.error('Upload error:', error);
+      message.error('Thêm bài tập thất bại: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const uploadProps = {
+    onRemove: (file) => {
+      const index = fileList.indexOf(file);
+      const newFileList = fileList.slice();
+      newFileList.splice(index, 1);
+      setFileList(newFileList);
+    },
+    beforeUpload: (file) => {
+      console.log('Before upload file:', file);
+      setFileList(prev => [...prev, file]);
+      return false;
+    },
+    onChange: ({ fileList: newFileList }) => {
+      console.log('onChange fileList:', newFileList);
+      setFileList(newFileList);
+    },
+    customRequest: ({ file, onSuccess }) => {
+      console.log('Custom request file:', file);
+      setTimeout(() => {
+        onSuccess("ok");
+      }, 0);
+    },
+    fileList,
+    multiple: true,
+    accept: '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.mp4,.webm'
+  };
+
+  return (
+    <Modal
+      title="Thêm bài tập"
+      open={isVisible}
+      onCancel={onCancel}
+      footer={null}
+    >
+      <Form form={form} onFinish={handleSubmit} layout="vertical">
+        <Form.Item
+          name="title"
+          label="Tiêu đề"
+          rules={[{ required: true, message: 'Vui lòng nhập tiêu đề' }]}
+        >
+          <Input />
+        </Form.Item>
+        <Form.Item name="description" label="Mô tả">
+          <Input.TextArea />
+        </Form.Item>
+        <Form.Item
+          name="duedate"
+          label="Hạn nộp"
+          rules={[{ required: true, message: 'Vui lòng chọn hạn nộp' }]}
+        >
+          <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
+        </Form.Item>
+        <Form.Item label="Tệp đính kèm">
+          <Upload {...uploadProps}>
+            <Button icon={<UploadOutlined />}>Chọn tệp</Button>
+          </Upload>
+        </Form.Item>
+        <Form.Item>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            Thêm
+          </Button>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 const ClassDetail = ({ basePath, customPermissions }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  
+  // Main states
   const [classInfo, setClassInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("1");
+  
+  // Student and Tutor states
   const [selectedStudentKeys, setSelectedStudentKeys] = useState([]);
   const [selectedTutorKeys, setSelectedTutorKeys] = useState([]);
+  
+  // Schedule states
   const [selectedScheduleKeys, setSelectedScheduleKeys] = useState([]);
   const [scheduleViewMode, setScheduleViewMode] = useState("table");
-
+  
+  // Submission states
   const [submissionModalVisible, setSubmissionModalVisible] = useState(false);
-  const [currentAssignment, setCurrentAssignment] = useState(null);
   const [currentSubmission, setCurrentSubmission] = useState(null);
   const [submissionLoading, setSubmissionLoading] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -99,6 +347,14 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   const [allSubmissions, setAllSubmissions] = useState({});
   const [selectedAssignmentFilter, setSelectedAssignmentFilter] = useState("all");
   const [searchText, setSearchText] = useState("");
+  
+  // Attendance states
+  const [attendanceStats, setAttendanceStats] = useState({});
+  
+  // Material and Assignment states
+  const [materialModalVisible, setMaterialModalVisible] = useState(false);
+  const [assignmentModalVisible, setAssignmentModalVisible] = useState(false);
+  const [modalLoading, setModalLoading] = useState(false);
 
   // Xác định basePath dựa theo role
   const effectiveBasePath = useMemo(() => {
@@ -129,6 +385,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           canView: true,
           canViewStatistics: true,
           canViewAttendance: true,
+          canCreateSchedule: true,
           canEdit: true,
           canDelete: true,
           canSubmitAssignment: false,
@@ -138,6 +395,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           canView: true,
           canViewStatistics: true,
           canViewAttendance: true,
+          canCreateSchedule: false,
           canEdit: false,
           canDelete: false,
           canSubmitAssignment: false,
@@ -147,6 +405,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           canView: true,
           canViewStatistics: false,
           canViewAttendance: false,
+          canCreateSchedule: false,
           canEdit: false,
           canDelete: false,
           canSubmitAssignment: true,
@@ -156,6 +415,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           canView: false,
           canViewStatistics: false,
           canViewAttendance: false,
+          canCreateSchedule: false,
           canEdit: false,
           canDelete: false,
           canSubmitAssignment: false,
@@ -198,6 +458,41 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     fetchClassDetail();
   }, [id]);
 
+  // Thêm useEffect để load attendance stats
+  useEffect(() => {
+    const loadAttendanceStats = async () => {
+      if (!classInfo?.enrollments) return;
+
+      try {
+        const stats = {};
+        for (const enrollment of classInfo.enrollments) {
+          const response = await getStudentAttendance(
+            classInfo._id,
+            enrollment.student_id._id
+          );
+          if (response && response.stats) {
+            stats[enrollment.student_id._id] = response.stats;
+          }
+        }
+        setAttendanceStats(stats);
+      } catch (error) {
+        console.error("Error loading attendance stats:", error);
+      }
+    };
+
+    loadAttendanceStats();
+  }, [classInfo]);
+
+  // Cập nhật hàm tính tỷ lệ vắng mặt
+  const calculateAbsentRate = useCallback(
+    (studentId) => {
+      const stats = attendanceStats[studentId];
+      if (!stats) return 0;
+      return stats.absentRate || 0;
+    },
+    [attendanceStats]
+  );
+
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
       case "open":
@@ -218,9 +513,41 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     const enrollments = classInfo.enrollments || [];
     const tutors = classInfo.tutors || [];
     const schedules = classInfo.schedules || [];
-    const validGrades = enrollments
-      .filter((e) => e.grade != null)
-      .map((e) => e.grade);
+
+    // Tính toán điểm số từ submissions
+    const allGrades = [];
+    const studentAverages = new Map(); // Map để lưu điểm trung bình của mỗi sinh viên
+
+    // Duyệt qua tất cả assignments
+    classInfo.contents?.forEach(content => {
+      if (content.content_type === 'assignment') {
+        // Lấy tất cả submissions của assignment này
+        const submissions = Object.values(allSubmissions)
+          .flat()
+          .filter(sub => 
+            sub.assignment_id?._id === content._id && 
+            sub.grade?.score != null
+          );
+
+        // Cập nhật điểm số cho từng sinh viên
+        submissions.forEach(submission => {
+          const studentId = submission.student_id?._id;
+          if (studentId) {
+            const currentGrades = studentAverages.get(studentId) || [];
+            currentGrades.push(submission.grade.score);
+            studentAverages.set(studentId, currentGrades);
+          }
+        });
+      }
+    });
+
+    // Tính điểm trung bình cho mỗi sinh viên
+    studentAverages.forEach((grades) => {
+      if (grades.length > 0) {
+        const average = grades.reduce((a, b) => a + b, 0) / grades.length;
+        allGrades.push(average);
+      }
+    });
 
     return {
       total_students: enrollments.length,
@@ -229,40 +556,15 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       total_schedules: schedules.length,
       primary_tutors: tutors.filter((t) => t.is_primary).length,
       grade_statistics: {
-        highest_grade: validGrades.length ? Math.max(...validGrades) : 0,
-        lowest_grade: validGrades.length ? Math.min(...validGrades) : 0,
-        average_grade: validGrades.length
-          ? validGrades.reduce((a, b) => a + b, 0) / validGrades.length
+        highest_grade: allGrades.length ? Math.max(...allGrades) : 0,
+        lowest_grade: allGrades.length ? Math.min(...allGrades) : 0,
+        average_grade: allGrades.length 
+          ? allGrades.reduce((a, b) => a + b, 0) / allGrades.length 
           : 0,
+        graded_students: allGrades.length // Số sinh viên đã có điểm
       },
     };
-  }, [classInfo]);
-
-  // Thêm hàm tính tỷ lệ vắng mặt
-  const calculateAbsentRate = useCallback(
-    (studentId) => {
-      // Lấy tổng số buổi học
-      const totalSchedules = classInfo.schedules?.length || 0;
-      if (totalSchedules === 0) return 0;
-
-      // Đếm số buổi vắng mặt
-      const absentCount =
-        classInfo.schedules?.reduce((count, schedule) => {
-          // Tìm attendance của sinh viên trong buổi học này
-          const attendance = schedule.attendances?.find(
-            (a) => a.student_id === studentId
-          );
-          // Nếu không có attendance hoặc status là absent thì tính là vắng
-          return (
-            count + (!attendance || attendance.status === "absent" ? 1 : 0)
-          );
-        }, 0) || 0;
-
-      // Tính tỷ lệ phần trăm
-      return Math.round((absentCount / totalSchedules) * 100);
-    },
-    [classInfo]
-  );
+  }, [classInfo, allSubmissions]);
 
   const handleUnenrollStudent = useCallback(
     async (enrollmentId) => {
@@ -463,16 +765,15 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   useEffect(() => {
     const loadSubmissions = async () => {
       try {
-        console.log("Loading submissions for assignments:", assignments);
         const submissionsData = {};
-        
+
         for (const assignment of assignments) {
           try {
             const response = await getSubmissionsByAssignment(assignment._id);
-            console.log(`Raw response for assignment ${assignment._id}:`, response);
-            
+
+
             // Nếu response là một object (không phải null)
-            if (response && typeof response === 'object') {
+            if (response && typeof response === "object") {
               // Kiểm tra xem response có phải là submission object không
               if (response._id && response.assignment_id) {
                 // Trường hợp API trả về submission trực tiếp
@@ -484,22 +785,22 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             } else {
               submissionsData[assignment._id] = null;
             }
-            
-            console.log(`Processed submission for assignment ${assignment._id}:`, submissionsData[assignment._id]);
-            
+
           } catch (error) {
-            console.error(`Error loading submission for assignment ${assignment._id}:`, error);
+            console.error(
+              `Error loading submission for assignment ${assignment._id}:`,
+              error
+            );
             submissionsData[assignment._id] = null;
           }
         }
-        
-        console.log("Final submissionsData:", submissionsData);
+
         setAssignmentSubmissions(submissionsData);
       } catch (error) {
-        console.error('Error loading submissions:', error);
+        console.error("Error loading submissions:", error);
       }
     };
-  
+
     if (assignments.length > 0) {
       loadSubmissions();
     }
@@ -510,28 +811,33 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     try {
       setLoadingSubmissions(true);
       const submissionsData = {};
-      
+
       for (const assignment of assignments) {
         try {
           const response = await getSubmissionsByAssignment(assignment._id);
           if (response?.data) {
             // Đảm bảo mỗi submission có thông tin sinh viên và assignment
-            submissionsData[assignment._id] = response.data.map(submission => ({
-              ...submission,
-              assignment_id: {
-                _id: assignment._id, // Đảm bảo gán đúng assignment_id
-                title: assignment.title
-              }
-            }));
+            submissionsData[assignment._id] = response.data.map(
+              (submission) => ({
+                ...submission,
+                assignment_id: {
+                  _id: assignment._id, // Đảm bảo gán đúng assignment_id
+                  title: assignment.title,
+                },
+              })
+            );
           }
         } catch (error) {
-          console.error(`Error loading submissions for assignment ${assignment._id}:`, error);
+          console.error(
+            `Error loading submissions for assignment ${assignment._id}:`,
+            error
+          );
         }
       }
-      
+
       setAllSubmissions(submissionsData);
     } catch (error) {
-      console.error('Error loading all submissions:', error);
+      console.error("Error loading all submissions:", error);
     } finally {
       setLoadingSubmissions(false);
     }
@@ -540,37 +846,41 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   // Thêm hàm để lọc submissions
   const filteredSubmissions = useMemo(() => {
     const allSubs = Object.values(allSubmissions).flat();
-    console.log('All Submissions:', allSubs);
-    console.log('Selected Assignment Filter:', selectedAssignmentFilter);
-    
+
     // Lọc theo assignment
     let filtered = allSubs;
     if (selectedAssignmentFilter !== "all") {
-      filtered = filtered.filter(sub => {
-        console.log('Comparing:', sub.assignment_id?._id, selectedAssignmentFilter);
+      filtered = filtered.filter((sub) => {
         return sub.assignment_id?._id === selectedAssignmentFilter;
       });
     }
-    console.log('Filtered by Assignment:', filtered);
 
     // Lọc theo tìm kiếm
     if (searchText) {
       const searchLower = searchText.toLowerCase();
-      filtered = filtered.filter(sub => {
-        const studentName = `${sub.student_id?.user_id?.first_name || ''} ${sub.student_id?.user_id?.last_name || ''}`.toLowerCase();
-        const studentCode = sub.student_id?.student_code?.toLowerCase() || '';
-        return studentName.includes(searchLower) || studentCode.includes(searchLower);
+      filtered = filtered.filter((sub) => {
+        const studentName = `${sub.student_id?.user_id?.first_name || ""} ${
+          sub.student_id?.user_id?.last_name || ""
+        }`.toLowerCase();
+        const studentCode = sub.student_id?.student_code?.toLowerCase() || "";
+        return (
+          studentName.includes(searchLower) || studentCode.includes(searchLower)
+        );
       });
     }
-    console.log('Filtered by Search:', filtered);
-
     return filtered;
   }, [allSubmissions, selectedAssignmentFilter, searchText]);
 
   // Thêm useEffect để load submissions khi assignments thay đổi
   useEffect(() => {
-    if (assignments.length > 0 && (user?.role === "admin" || user?.role === "staff" || 
-        classInfo?.tutors?.some(tutor => tutor.tutor_id.user_id._id === user?._id))) {
+    if (
+      assignments.length > 0 &&
+      (user?.role === "admin" ||
+        user?.role === "staff" ||
+        classInfo?.tutors?.some(
+          (tutor) => tutor.tutor_id.user_id._id === user?._id
+        ))
+    ) {
       loadAllSubmissions();
     }
   }, [assignments, user, classInfo, loadAllSubmissions]);
@@ -608,7 +918,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     // Component render preview content
     const PreviewContent = ({ media }) => {
       const fileType = getFileType(media.file_name);
-      const fileUrl = `{}/${media.file_path}`;
+      const fileUrl = `${staticURL}/${media.file_path}`;
 
       switch (fileType) {
         case "image":
@@ -634,7 +944,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             </audio>
           );
         default:
-          return null;
+          return <Text>Không thể hiển thị trước tệp này.</Text>;
       }
     };
 
@@ -664,7 +974,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       }
                       onClick={() => handlePreview(attachment)}
                     >
-                      Preview
+                      Xem trước
                     </Button>
                   ),
                   <Button
@@ -673,7 +983,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                     href={`${staticURL}/${attachment.file_path}`}
                     target="_blank"
                   >
-                    Download
+                    Tải xuống
                   </Button>,
                 ].filter(Boolean)}
               >
@@ -713,40 +1023,44 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     );
   };
 
+  // Xử lý gốc cho submission
   const handleSubmissionClick = async (assignment) => {
-    setCurrentAssignment(assignment);
+    setCurrentSubmission(assignment);
     try {
+      // Lấy submission hiện tại của assignment này nếu có
       const response = await getSubmissionsByAssignment(assignment._id);
-      console.log("Submission response:", response);
-
-      if (response?.data) {
-        setCurrentSubmission(response.data);
-        // Lưu submission vào state
-        setAssignmentSubmissions((prev) => ({
-          ...prev,
-          [assignment._id]: response.data,
-        }));
-
+      
+      if (response && response.data) {
+        setCurrentSubmission({
+          ...assignment,
+          submission: response.data
+        });
+        
+        // Nếu đã có file đính kèm, hiển thị lên UI
         if (response.data.attachments && response.data.attachments.length > 0) {
-          const existingFiles = response.data.attachments.map((file) => ({
+          const existingFiles = response.data.attachments.map(file => ({
             uid: file._id,
             name: file.file_name,
-            status: "done",
+            status: 'done',
             url: `${staticURL}/${file.file_path}`,
             size: file.file_size,
-            type: file.file_type,
+            type: file.file_type
           }));
           setUploadedFiles(existingFiles);
+        } else {
+          setUploadedFiles([]);
         }
       } else {
-        setCurrentSubmission(null);
+        // Nếu chưa có submission
+        setCurrentSubmission(assignment);
         setUploadedFiles([]);
       }
     } catch (error) {
       console.error("Error fetching submission:", error);
-      setCurrentSubmission(null);
+      setCurrentSubmission(assignment);
       setUploadedFiles([]);
     }
+    
     setSubmissionModalVisible(true);
   };
 
@@ -756,83 +1070,76 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         message.error("Please upload a file first");
         return;
       }
-  
+
       setSubmissionLoading(true);
       const formData = new FormData();
-      formData.append("assignment_id", currentAssignment._id);
-  
+      formData.append("assignment_id", currentSubmission._id);
+
       if (user?.role === "student") {
         const studentEnrollment = classInfo.enrollments.find(
-          (enrollment) => enrollment.student_id.user_id._id === user._id
+          enrollment => enrollment.student_id.user_id._id === user._id
         );
-  
+
         if (studentEnrollment) {
           formData.append("student_id", studentEnrollment.student_id._id);
         } else {
           throw new Error("Student enrollment not found");
         }
       }
-  
+
+      // Thêm file vào formData
       const newFile = uploadedFiles[0];
       if (newFile?.originFileObj) {
         formData.append("file", newFile.originFileObj);
+      } else if (newFile instanceof File) {
+        formData.append("file", newFile);
       } else {
         message.error("No valid file found");
         setSubmissionLoading(false);
         return;
       }
-  
+
       const response = await createSubmission(formData);
-  
+
       if (response?.data) {
-        message.success(
-          currentSubmission
-            ? "Submission updated successfully"
-            : "Submission created successfully"
-        );
-  
-        // Cập nhật state ngay lập tức
+        message.success("Submission created successfully");
+        
+        // Cập nhật state
         setAssignmentSubmissions(prev => ({
           ...prev,
-          [currentAssignment._id]: response.data
+          [currentSubmission._id]: response.data
         }));
-  
+        
         setSubmissionModalVisible(false);
         setUploadedFiles([]);
-        setCurrentSubmission(response.data);
-  
-        // Refresh lại toàn bộ submissions
-        const loadSubmissions = async () => {
-          const submissionsData = { ...assignmentSubmissions };
-          for (const assignment of assignments) {
-            try {
-              const submissionResponse = await getSubmissionsByAssignment(assignment._id);
-              if (submissionResponse && typeof submissionResponse === 'object') {
-                if (submissionResponse._id && submissionResponse.assignment_id) {
-                  submissionsData[assignment._id] = submissionResponse;
-                } else if (submissionResponse.data) {
-                  submissionsData[assignment._id] = submissionResponse.data;
+        
+        // Refresh lại data
+        const refreshSubmissions = async () => {
+          try {
+            const updatedSubmissions = {...assignmentSubmissions};
+            
+            for (const assignment of assignments) {
+              try {
+                const refreshResponse = await getSubmissionsByAssignment(assignment._id);
+                if (refreshResponse?.data) {
+                  updatedSubmissions[assignment._id] = refreshResponse.data;
                 }
+              } catch (error) {
+                console.error(`Error refreshing assignment ${assignment._id}:`, error);
               }
-            } catch (error) {
-              console.error(`Error refreshing submission for assignment ${assignment._id}:`, error);
             }
+            
+            setAssignmentSubmissions(updatedSubmissions);
+          } catch (error) {
+            console.error("Error refreshing submissions:", error);
           }
-          setAssignmentSubmissions(submissionsData);
         };
-  
-        loadSubmissions();
+        
+        refreshSubmissions();
       }
     } catch (error) {
       console.error("Error submitting assignment:", error);
-      if (error.response) {
-        console.error("Error response:", error.response.data);
-      }
-      message.error(
-        error.response?.data?.error ||
-          error.message ||
-          "Error submitting assignment"
-      );
+      message.error(error.response?.data?.error || error.message || "Error submitting assignment");
     } finally {
       setSubmissionLoading(false);
     }
@@ -848,7 +1155,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     loading,
   }) => {
     const [form] = Form.useForm();
-    const isExpired = new Date(assignment?.duedate) < new Date();
+    const isExpired = assignment && new Date(assignment?.duedate) < new Date();
 
     const uploadProps = {
       accept: ".pdf",
@@ -880,15 +1187,18 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       },
     };
 
+    // Determine if there's already a submission
+    const existingSubmission = assignment?.submission;
+
     return (
       <Modal
-        title={`${submission ? "Update" : "Create"} Submission`}
+        title={`${existingSubmission ? "Update" : "Create"} Submission`}
         open={visible}
         onCancel={onCancel}
         footer={null}
         width={800}
       >
-        <Form form={form} onFinish={handleSubmissionUpload} layout="vertical">
+        <Form form={form} onFinish={onSubmit} layout="vertical">
           <Space direction="vertical" style={{ width: "100%" }} size="large">
             {/* Assignment Info */}
             <Card size="small">
@@ -897,31 +1207,27 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                   {assignment?.title}
                 </Descriptions.Item>
                 <Descriptions.Item label="Due Date">
-                  {new Date(assignment?.duedate).toLocaleString()}
+                  {assignment?.duedate && new Date(assignment.duedate).toLocaleString()}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
 
-            {/* Current Submission Info - Thêm phần này */}
-            {submission && (
+            {/* Current Submission Info */}
+            {existingSubmission && (
               <Card size="small" title="Current Submission">
                 <Descriptions column={1}>
                   <Descriptions.Item label="Submitted At">
-                    {new Date(submission.submitted_at).toLocaleString()}
+                    {existingSubmission.submitted_at && new Date(existingSubmission.submitted_at).toLocaleString()}
                   </Descriptions.Item>
                   <Descriptions.Item label="Status">
-                    <Tag
-                      color={submission.status === "graded" ? "green" : "blue"}
-                    >
-                      {submission.status.toUpperCase()}
+                    <Tag color={existingSubmission.status === "graded" ? "green" : "blue"}>
+                      {existingSubmission.status ? existingSubmission.status.toUpperCase() : "PENDING"}
                     </Tag>
                   </Descriptions.Item>
-                  {submission.grade && (
+                  {existingSubmission.grade && (
                     <Descriptions.Item label="Grade">
-                      <Tag
-                        color={submission.grade.score >= 5 ? "green" : "red"}
-                      >
-                        {submission.grade.score}/10
+                      <Tag color={existingSubmission.grade.score >= 5 ? "green" : "red"}>
+                        {existingSubmission.grade.score}/10
                       </Tag>
                     </Descriptions.Item>
                   )}
@@ -932,19 +1238,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             {/* File Upload */}
             {!isExpired && (
               <Form.Item
-                label={
-                  submission
-                    ? "Upload New File (PDF only)"
-                    : "Upload File (PDF only)"
-                }
+                label={existingSubmission ? "Upload New File (PDF only)" : "Upload File (PDF only)"}
                 required
                 rules={[{ required: true, message: "Please upload a file" }]}
               >
                 <Upload {...uploadProps}>
-                  <Button
-                    icon={<UploadOutlined />}
-                    disabled={uploadedFiles.length > 0}
-                  >
+                  <Button icon={<UploadOutlined />} disabled={uploadedFiles.length > 0}>
                     {uploadedFiles.length > 0 ? "File Selected" : "Select File"}
                   </Button>
                 </Upload>
@@ -952,12 +1251,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             )}
 
             {/* Current Files */}
-            {submission?.attachments?.length > 0 && (
+            {existingSubmission?.attachments?.length > 0 && (
               <div>
                 <Divider orientation="left">Current Submitted File</Divider>
                 <List
                   size="small"
-                  dataSource={submission.attachments}
+                  dataSource={existingSubmission.attachments}
                   renderItem={(file) => (
                     <List.Item
                       actions={[
@@ -965,10 +1264,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                           type="link"
                           icon={<DownloadOutlined />}
                           onClick={() =>
-                            window.open(
-                              `${staticURL}/${file.file_path}`,
-                              "_blank"
-                            )
+                            window.open(`${staticURL}/${file.file_path}`, "_blank")
                           }
                         >
                           Download
@@ -986,9 +1282,8 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                             <br />
                             <Text type="secondary">
                               Submitted:{" "}
-                              {new Date(
-                                submission.submitted_at
-                              ).toLocaleString()}
+                              {existingSubmission.submitted_at && 
+                                new Date(existingSubmission.submitted_at).toLocaleString()}
                             </Text>
                           </>
                         }
@@ -1009,7 +1304,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                   disabled={uploadedFiles.length === 0}
                   block
                 >
-                  {submission ? "Update Submission" : "Create Submission"}
+                  {existingSubmission ? "Update Submission" : "Create Submission"}
                 </Button>
               </Form.Item>
             )}
@@ -1019,7 +1314,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     );
   };
 
-  const studentColumns = [
+  const studentColumns = useMemo(() => [
     {
       title: "No.",
       key: "no",
@@ -1041,7 +1336,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           />
           <Space direction="vertical" size={0}>
             <Text
-              strong
+              style={{ cursor: "pointer", color: "#1890ff" }}
+              onClick={() =>
+                navigate(
+                  `${effectiveBasePath}/user/${record.student_id.user_id._id}`
+                )
+              }
             >{`${record.student_id.user_id.first_name} ${record.student_id.user_id.last_name}`}</Text>
             <Text type="secondary">{record.student_id.student_code}</Text>
           </Space>
@@ -1069,30 +1369,28 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
         if (!canViewStatus) return <Text type="secondary">Restricted</Text>;
 
-        const absentRate = calculateAbsentRate(record.student_id._id);
-        let color = "green";
-        if (absentRate > 30) {
-          color = "red";
-        } else if (absentRate > 20) {
-          color = "orange";
-        } else if (absentRate > 10) {
-          color = "gold";
-        }
+        const stats = attendanceStats[record.student_id._id] || {
+          totalSchedules: 0,
+          absentCount: 0,
+          presentCount: 0,
+          lateCount: 0,
+          notRecordedCount: 0,
+          absentRate: 0
+        };
+
+        const absentRate = stats.absentRate;
 
         return (
           <Space direction="vertical" size={0}>
-            <Tag color={record.status === "active" ? "green" : "red"}>
-              {record.status?.toUpperCase()}
-            </Tag>
-            <Tag color={color}>{absentRate}% Absent</Tag>
+            <Tag color={absentRate > 30 ? "red" : "green"}>{absentRate}% Absent</Tag>
           </Space>
         );
       },
     },
     {
-      title: "Grade",
-      dataIndex: "grade",
-      render: (grade, record) => {
+      title: "Average Grade",
+      key: "grade",
+      render: (_, record) => {
         const canViewGrade =
           permissions.canViewStatistics ||
           (user?.role === "student" &&
@@ -1100,9 +1398,25 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
         if (!canViewGrade) return <Text type="secondary">Restricted</Text>;
 
+        // Calculate average grade from submissions
+        const studentSubmissions = Object.values(allSubmissions)
+          .flat()
+          .filter(
+            (sub) =>
+              sub.student_id?._id === record.student_id._id &&
+              sub.grade?.score != null
+          );
+
+        const averageGrade = studentSubmissions.length
+          ? studentSubmissions.reduce(
+              (sum, sub) => sum + sub.grade.score,
+              0
+            ) / studentSubmissions.length
+          : null;
+
         return (
-          <Tag color={grade >= 5 ? "green" : "red"}>
-            {grade?.toFixed(1) || "N/A"}
+          <Tag color={averageGrade >= 5 ? "green" : averageGrade ? "red" : "default"}>
+            {averageGrade ? averageGrade.toFixed(1) : "N/A"}
           </Tag>
         );
       },
@@ -1119,7 +1433,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
               size="small"
               onClick={() =>
                 navigate(
-                  `${effectiveBasePath}/student/${record.student_id._id}`
+                  `${effectiveBasePath}/user/${record.student_id.user_id._id}`
                 )
               }
             />
@@ -1144,7 +1458,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         </Space>
       ),
     },
-  ];
+  ], [permissions, user, attendanceStats]);
 
   const tutorColumns = [
     {
@@ -1163,7 +1477,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           />
           <Space direction="vertical" size={0}>
             <Text
-              strong
+              style={{ cursor: "pointer", color: "#1890ff" }}
+              onClick={() =>
+                navigate(
+                  `${effectiveBasePath}/user/${record.tutor_id.user_id._id}`
+                )
+              }
             >{`${record.tutor_id.user_id.first_name} ${record.tutor_id.user_id.last_name}`}</Text>
             <Text type="secondary">{record.tutor_id.tutor_code}</Text>
           </Space>
@@ -1200,7 +1519,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
               icon={<EyeOutlined />}
               size="small"
               onClick={() =>
-                navigate(`${effectiveBasePath}/tutor/${record.tutor_id._id}`)
+                navigate(`${effectiveBasePath}/user/${record.tutor_id.user_id._id}`)
               }
             />
           </Tooltip>
@@ -1346,8 +1665,16 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             icon={<UserOutlined />}
           />
           <Space direction="vertical" size={0}>
-            <Text strong>
-              {record.student_id?.user_id?.first_name} {record.student_id?.user_id?.last_name}
+            <Text
+              style={{ cursor: "pointer", color: "#1890ff" }}
+              onClick={() =>
+                navigate(
+                  `${effectiveBasePath}/user/${record.student_id.user_id._id}`
+                )
+              }
+            >
+              {record.student_id?.user_id?.first_name}{" "}
+              {record.student_id?.user_id?.last_name}
             </Text>
             <Text type="secondary">{record.student_id?.student_code}</Text>
           </Space>
@@ -1357,15 +1684,17 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     {
       title: "Assignment",
       key: "assignment",
-      render: (_, record) => (
-        <Text strong>{record.assignment_id?.title}</Text>
-      ),
+      render: (_, record) => <Text strong>{record.assignment_id?.title}</Text>,
     },
     {
       title: "Submitted At",
       key: "submitted_at",
       render: (_, record) => (
-        <Text>{record.submitted_at ? new Date(record.submitted_at).toLocaleString() : "Not submitted"}</Text>
+        <Text>
+          {record.submitted_at
+            ? new Date(record.submitted_at).toLocaleString()
+            : "Not submitted"}
+        </Text>
       ),
     },
     {
@@ -1380,50 +1709,48 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     {
       title: "Grade",
       key: "grade",
-      render: (_, record) => (
+      render: (_, record) =>
         record.grade ? (
-          <Tag color={record.grade.score >= 5 ? "green" : "red"}>
-            {record.grade.score}/10
+          <Tag color={record.grade.score >= 50 ? "green" : "red"}>
+            {record.grade.score}/100
           </Tag>
         ) : (
           <Text type="secondary">Not graded</Text>
-        )
-      ),
+        ),
     },
     {
       title: "Graded At",
       key: "graded_at",
-      render: (_, record) => (
+      render: (_, record) =>
         record.grade?.graded_at ? (
           <Text>{new Date(record.grade.graded_at).toLocaleString()}</Text>
         ) : (
           <Text type="secondary">-</Text>
-        )
-      ),
+        ),
     },
     {
       title: "Graded By",
       key: "graded_by",
-      render: (_, record) => (
+      render: (_, record) =>
         record.grade?.graded_by ? (
           <Space>
             <Avatar
               size={24}
               src={
-                record.grade.graded_by?.avatar_path
-                  ? `${staticURL}/${record.grade.graded_by.avatar_path}`
+                record.grade?.graded_by?.tutor_id?.user_id?.avatar_path
+                  ? `${staticURL}/${record.grade.graded_by.tutor_id.user_id.avatar_path}`
                   : "/default-avatar.png"
               }
               icon={<UserOutlined />}
             />
             <Text>
-              {record.grade.graded_by?.first_name} {record.grade.graded_by?.last_name}
+              {record.grade?.graded_by?.tutor_id?.user_id?.first_name}{" "}
+              {record.grade?.graded_by?.tutor_id?.user_id?.last_name}
             </Text>
           </Space>
         ) : (
           <Text type="secondary">-</Text>
-        )
-      ),
+        ),
     },
     {
       title: "Actions",
@@ -1435,7 +1762,9 @@ const ClassDetail = ({ basePath, customPermissions }) => {
               <Button
                 type="link"
                 icon={<EyeOutlined />}
-                onClick={() => navigate(`${effectiveBasePath}/submission/${record._id}`)}
+                onClick={() =>
+                  navigate(`${effectiveBasePath}/submission/${record._id}`)
+                }
               />
             </Tooltip>
           )}
@@ -1443,6 +1772,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       ),
     },
   ];
+
+  // Thêm hàm kiểm tra xem user có phải là tutor của lớp không
+  const isClassTutor = useMemo(() => {
+    if (!classInfo || !user) return false;
+    return classInfo.tutors?.some(tutor => tutor.tutor_id.user_id._id === user._id);
+  }, [classInfo, user]);
 
   const tabItems = useMemo(() => {
     if (!classInfo) return [];
@@ -1629,6 +1964,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             <Row justify="space-between" style={{ marginBottom: 16 }}>
               <Col>
                 <Space>
+                  {permissions.canCreateSchedule && (
                   <Button
                     type="primary"
                     icon={<PlusOutlined />}
@@ -1640,6 +1976,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                   >
                     Add Schedule
                   </Button>
+                  )}
                   {scheduleViewMode === "table" &&
                     selectedScheduleKeys.length > 0 && (
                       <Popconfirm
@@ -1816,6 +2153,21 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             ),
             children: (
               <div style={{ padding: "24px 0" }}>
+                <Row justify="space-between" style={{ marginBottom: 16 }}>
+                  <Col>
+                    {isClassTutor && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          setMaterialModalVisible(true);
+                        }}
+                      >
+                        Add Material
+                      </Button>
+                    )}
+                  </Col>
+                </Row>
                 {materials.length > 0 ? (
                   <List
                     grid={{ gutter: 16, column: 2 }}
@@ -1874,6 +2226,21 @@ const ClassDetail = ({ basePath, customPermissions }) => {
             ),
             children: (
               <div style={{ padding: "24px 0" }}>
+                <Row justify="space-between" style={{ marginBottom: 16 }}>
+                  <Col>
+                    {isClassTutor && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          setAssignmentModalVisible(true);
+                        }}
+                      >
+                        Add Assignment
+                      </Button>
+                    )}
+                  </Col>
+                </Row>
                 {assignments.length > 0 ? (
                   <List
                     grid={{ gutter: 16, column: 1 }}
@@ -1901,7 +2268,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                             <Space>
                               <ClockCircleOutlined />
                               <Text type="secondary">
-                                Due: {" "}
+                                Due:{" "}
                                 {new Date(assignment.duedate).toLocaleString()}
                               </Text>
                             </Space>
@@ -1935,13 +2302,16 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                       <Space>
                                         <Text type="secondary">Submitted at:</Text>
                                         <Text strong>
-                                          {new Date(assignmentSubmissions[assignment._id].submitted_at).toLocaleString()}
+                                          {assignmentSubmissions[assignment._id].submitted_at && 
+                                            new Date(assignmentSubmissions[assignment._id].submitted_at).toLocaleString()}
                                         </Text>
-                                        <Tag color={assignmentSubmissions[assignment._id]?.status === "graded" ? "green" : "blue"}>
-                                          {assignmentSubmissions[assignment._id]?.status?.toUpperCase() || "UNKNOWN"}
+                                        <Tag 
+                                          color={assignmentSubmissions[assignment._id].status === "graded" ? "green" : "blue"}
+                                        >
+                                          {assignmentSubmissions[assignment._id].status || "PENDING"}
                                         </Tag>
                                       </Space>
-                                      {assignmentSubmissions[assignment._id]?.attachments?.length > 0 && (
+                                      {assignmentSubmissions[assignment._id].attachments?.length > 0 && (
                                         <Button
                                           type="link"
                                           icon={<DownloadOutlined />}
@@ -1990,13 +2360,18 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       : [];
 
     // Kiểm tra quyền xem submissions
-    const canViewSubmissions = user?.role === "admin" || 
-                             user?.role === "staff" || 
-                             classInfo?.tutors?.some(tutor => tutor.tutor_id.user_id._id === user?._id);
+    const canViewSubmissions =
+      user?.role === "admin" ||
+      user?.role === "staff" ||
+      classInfo?.tutors?.some(
+        (tutor) => tutor.tutor_id.user_id._id === user?._id
+      );
 
     // Thêm tab Submissions nếu có quyền
     if (canViewSubmissions) {
-      const ungradedCount = filteredSubmissions.filter(sub => sub.status !== "graded").length;
+      const ungradedCount = filteredSubmissions.filter(
+        (sub) => sub.status !== "graded"
+      ).length;
       additionalItems.push({
         key: "7",
         label: (
@@ -2014,9 +2389,10 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                   style={{ width: 200 }}
                   value={selectedAssignmentFilter}
                   onChange={setSelectedAssignmentFilter}
+                  popupMatchSelectWidth={false}
                 >
                   <Select.Option value="all">All Assignments</Select.Option>
-                  {assignments.map(assignment => (
+                  {assignments.map((assignment) => (
                     <Select.Option key={assignment._id} value={assignment._id}>
                       {assignment.title}
                     </Select.Option>
@@ -2026,17 +2402,17 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                   placeholder="Search by student name or code"
                   style={{ width: 300 }}
                   value={searchText}
-                  onChange={e => setSearchText(e.target.value)}
+                  onChange={(e) => setSearchText(e.target.value)}
                   allowClear
                 />
               </Space>
 
               {/* Thêm phần hiển thị học viên chưa nộp bài */}
               {selectedAssignmentFilter !== "all" && (
-                <Card 
+                <Card
                   title={
                     <Space>
-                      <WarningOutlined style={{ color: '#faad14' }} />
+                      <WarningOutlined style={{ color: "#faad14" }} />
                       <Text strong>Students Who Haven't Submitted</Text>
                     </Space>
                   }
@@ -2060,9 +2436,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                             />
                             <Space direction="vertical" size={0}>
                               <Text strong>
-                                {record.student_id?.user_id?.first_name} {record.student_id?.user_id?.last_name}
+                                {record.student_id?.user_id?.first_name}{" "}
+                                {record.student_id?.user_id?.last_name}
                               </Text>
-                              <Text type="secondary">{record.student_id?.student_code}</Text>
+                              <Text type="secondary">
+                                {record.student_id?.student_code}
+                              </Text>
                             </Space>
                           </Space>
                         ),
@@ -2077,23 +2456,23 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                       {
                         title: "Status",
                         key: "status",
-                        render: () => (
-                          <Tag color="warning">Not Submitted</Tag>
-                        ),
+                        render: () => <Tag color="warning">Not Submitted</Tag>,
                       },
                     ]}
-                    dataSource={classInfo.enrollments.filter(enrollment => {
+                    dataSource={classInfo.enrollments.filter((enrollment) => {
                       // Lọc ra những học viên chưa nộp bài cho assignment được chọn
                       const hasSubmission = filteredSubmissions.some(
-                        sub => sub.student_id._id === enrollment.student_id._id && 
-                               sub.assignment_id._id === selectedAssignmentFilter
+                        (sub) =>
+                          sub.student_id._id === enrollment.student_id._id &&
+                          sub.assignment_id._id === selectedAssignmentFilter
                       );
                       return !hasSubmission;
                     })}
-                    rowKey={record => record.student_id._id}
+                    rowKey={(record) => record.student_id._id}
                     pagination={{
                       showSizeChanger: true,
-                      showTotal: (total) => `Total ${total} students haven't submitted`,
+                      showTotal: (total) =>
+                        `Total ${total} students haven't submitted`,
                     }}
                   />
                 </Card>
@@ -2136,20 +2515,10 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     selectedAssignmentFilter,
     filteredSubmissions,
     searchText,
+    isClassTutor,
   ]);
 
-  if (loading) {
-    return <Card loading={true} />;
-  }
-
-  if (!classInfo) {
-    return (
-      <Card>
-        <div>Class not found</div>
-      </Card>
-    );
-  }
-
+  // Thêm các Modal vào phần return
   return (
     <div>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
@@ -2194,16 +2563,32 @@ const ClassDetail = ({ basePath, customPermissions }) => {
 
       <SubmissionModal
         visible={submissionModalVisible}
-        assignment={currentAssignment}
+        assignment={currentSubmission}
         submission={currentSubmission}
         onCancel={() => {
           setSubmissionModalVisible(false);
-          setCurrentAssignment(null);
           setCurrentSubmission(null);
           setUploadedFiles([]);
         }}
         onSubmit={handleSubmissionUpload}
         loading={submissionLoading}
+      />
+
+      <MaterialModal
+        isVisible={materialModalVisible}
+        onCancel={() => setMaterialModalVisible(false)}
+        classId={id}
+        onSuccess={() => {
+          // Handle refresh logic
+        }}
+      />
+      <AssignmentModal
+        isVisible={assignmentModalVisible}
+        onCancel={() => setAssignmentModalVisible(false)}
+        classId={id}
+        onSuccess={() => {
+          // Handle refresh logic
+        }}
       />
     </div>
   );

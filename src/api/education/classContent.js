@@ -1,7 +1,11 @@
 import { api } from "../config";
 
 export const createClassContent = async (data) => {
-  return api.post("/education/classContent", data);
+  return api.post("/education/classContent", data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
 export const getContentByClassId = async (id) => {
@@ -13,7 +17,11 @@ export const getContentById = async (id) => {
 };
 
 export const updateContent = async (id, data) => {
-  return api.put(`/education/classContent/${id}`, data);
+  return api.put(`/education/classContent/${id}`, data, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
 };
 
 export const deleteContent = async (id) => {

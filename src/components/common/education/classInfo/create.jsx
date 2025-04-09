@@ -389,6 +389,15 @@ const CreateClass = ({ basePath, customPermissions }) => {
       onChange={setSelectedStudents}
       render={item => item.title}
       disabled={!selectedCourse}
+      showSearch
+      filterOption={(inputValue, item) =>
+        item.title.toLowerCase().includes(inputValue.toLowerCase()) ||
+        item.description.toLowerCase().includes(inputValue.toLowerCase())
+      }
+      listStyle={{
+        width: 500,
+        height: 400,
+      }}
       style={{ marginTop: 20 }}
     />
   );
@@ -402,6 +411,15 @@ const CreateClass = ({ basePath, customPermissions }) => {
         onChange={setSelectedTutors}
         render={item => item.title}
         disabled={!selectedCourse}
+        showSearch
+        filterOption={(inputValue, item) =>
+          item.title.toLowerCase().includes(inputValue.toLowerCase()) ||
+          item.description.toLowerCase().includes(inputValue.toLowerCase())
+        }
+        listStyle={{
+          width: 500,
+          height: 400,
+        }}
         style={{ marginTop: 20 }}
       />
 

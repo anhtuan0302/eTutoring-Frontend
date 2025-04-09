@@ -23,6 +23,8 @@ import { PostPage } from "../pages/admin/blog/post";
 import { MessagePage } from "../pages/admin/communication/message";
 import { AdminProfilePage } from "../pages/admin/auth/profile";
 
+import { CreateSchedulePage } from "../pages/admin/education/classInfo";
+
 const AdminRoutes = () => {
 
     return (
@@ -54,7 +56,8 @@ const AdminRoutes = () => {
             <Route path="classInfo/create" element={<CreateClassPage />} />
             <Route path="classInfo/:id" element={<DetailClassPage />} />
             <Route path="classInfo/:id/edit" element={<UpdateClassPage />} />
-
+            <Route path="classInfo/:id/schedule/create" element={<CreateSchedulePage />} />
+            
             <Route path="classSchedule" element={<ListClassSchedulesPage />} />
 
             <Route path="attendance/schedule/:id" element={<ListAttendancePage />} />
