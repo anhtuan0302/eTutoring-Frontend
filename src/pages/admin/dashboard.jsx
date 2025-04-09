@@ -840,20 +840,7 @@ const Dashboard = () => {
           </Card>
         </div>
       ) : (
-  <div style={{ padding: '24px' }}>
-          {/* Header with Title and Refresh Button */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <Title level={2}><DashboardOutlined /> Admin Dashboard</Title>
-            <Button 
-              type="primary" 
-              icon={<ReloadOutlined />}
-              onClick={() => window.location.reload()}
-            >
-              Refresh Data
-            </Button>
-          </div>
-          
-          {/* KPI Summary Cards */}
+  <div>
     <Row gutter={[16, 16]}>
       <Col xs={24} sm={12} lg={6}>
               <Card hoverable>
