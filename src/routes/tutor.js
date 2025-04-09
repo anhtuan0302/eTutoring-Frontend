@@ -8,6 +8,7 @@ import { PostPage } from "../pages/tutor/blog/post";
 import { TutorProfilePage } from "../pages/tutor/auth/profile";
 import { ListClassesPage, DetailClassPage } from "../pages/tutor/education/classInfo";
 import { ClassSchedulePage } from "../pages/tutor/education/classSchedule";
+import { SubmissionDetailPage } from "../pages/tutor/education/submission";
 
 const TutorRoutes = () => {
 
@@ -21,6 +22,9 @@ const TutorRoutes = () => {
             <Route path="classInfo/:id" element={<DetailClassPage />} />
 
             <Route path="classSchedule" element={<ClassSchedulePage />} />
+
+            <Route path="submission/:id" element={<SubmissionDetailPage />} />
+            
             <Route path="*" element={<NotFoundPage />} />
         </Routes>
     );

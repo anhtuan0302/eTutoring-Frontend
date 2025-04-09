@@ -30,6 +30,7 @@ import {
   Input,
   InputNumber,
   DatePicker,
+  Select,
 } from "antd";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../../../AuthContext";
@@ -69,6 +70,7 @@ import {
   PaperClipOutlined,
   PlayCircleOutlined,
   UploadOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 
 import { staticURL } from "../../../../api/config";
@@ -94,6 +96,9 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [assignmentSubmissions, setAssignmentSubmissions] = useState({});
   const [loadingSubmissions, setLoadingSubmissions] = useState(false);
+  const [allSubmissions, setAllSubmissions] = useState({});
+  const [selectedAssignmentFilter, setSelectedAssignmentFilter] = useState("all");
+  const [searchText, setSearchText] = useState("");
 
   // Xác định basePath dựa theo role
   const effectiveBasePath = useMemo(() => {
@@ -500,7 +505,75 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     }
   }, [assignments]);
 
-  
+  // Thêm hàm để lấy tất cả submissions
+  const loadAllSubmissions = useCallback(async () => {
+    try {
+      setLoadingSubmissions(true);
+      const submissionsData = {};
+      
+      for (const assignment of assignments) {
+        try {
+          const response = await getSubmissionsByAssignment(assignment._id);
+          if (response?.data) {
+            // Đảm bảo mỗi submission có thông tin sinh viên và assignment
+            submissionsData[assignment._id] = response.data.map(submission => ({
+              ...submission,
+              assignment_id: {
+                _id: assignment._id, // Đảm bảo gán đúng assignment_id
+                title: assignment.title
+              }
+            }));
+          }
+        } catch (error) {
+          console.error(`Error loading submissions for assignment ${assignment._id}:`, error);
+        }
+      }
+      
+      setAllSubmissions(submissionsData);
+    } catch (error) {
+      console.error('Error loading all submissions:', error);
+    } finally {
+      setLoadingSubmissions(false);
+    }
+  }, [assignments]);
+
+  // Thêm hàm để lọc submissions
+  const filteredSubmissions = useMemo(() => {
+    const allSubs = Object.values(allSubmissions).flat();
+    console.log('All Submissions:', allSubs);
+    console.log('Selected Assignment Filter:', selectedAssignmentFilter);
+    
+    // Lọc theo assignment
+    let filtered = allSubs;
+    if (selectedAssignmentFilter !== "all") {
+      filtered = filtered.filter(sub => {
+        console.log('Comparing:', sub.assignment_id?._id, selectedAssignmentFilter);
+        return sub.assignment_id?._id === selectedAssignmentFilter;
+      });
+    }
+    console.log('Filtered by Assignment:', filtered);
+
+    // Lọc theo tìm kiếm
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(sub => {
+        const studentName = `${sub.student_id?.user_id?.first_name || ''} ${sub.student_id?.user_id?.last_name || ''}`.toLowerCase();
+        const studentCode = sub.student_id?.student_code?.toLowerCase() || '';
+        return studentName.includes(searchLower) || studentCode.includes(searchLower);
+      });
+    }
+    console.log('Filtered by Search:', filtered);
+
+    return filtered;
+  }, [allSubmissions, selectedAssignmentFilter, searchText]);
+
+  // Thêm useEffect để load submissions khi assignments thay đổi
+  useEffect(() => {
+    if (assignments.length > 0 && (user?.role === "admin" || user?.role === "staff" || 
+        classInfo?.tutors?.some(tutor => tutor.tutor_id.user_id._id === user?._id))) {
+      loadAllSubmissions();
+    }
+  }, [assignments, user, classInfo, loadAllSubmissions]);
 
   // Hàm format dung lượng file
   const formatFileSize = (bytes) => {
@@ -1256,6 +1329,121 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     },
   ];
 
+  // Thêm columns cho bảng submissions
+  const submissionColumns = [
+    {
+      title: "Student",
+      key: "student",
+      render: (_, record) => (
+        <Space>
+          <Avatar
+            size={40}
+            src={
+              record.student_id?.user_id?.avatar_path
+                ? `${staticURL}/${record.student_id.user_id.avatar_path}`
+                : "/default-avatar.png"
+            }
+            icon={<UserOutlined />}
+          />
+          <Space direction="vertical" size={0}>
+            <Text strong>
+              {record.student_id?.user_id?.first_name} {record.student_id?.user_id?.last_name}
+            </Text>
+            <Text type="secondary">{record.student_id?.student_code}</Text>
+          </Space>
+        </Space>
+      ),
+    },
+    {
+      title: "Assignment",
+      key: "assignment",
+      render: (_, record) => (
+        <Text strong>{record.assignment_id?.title}</Text>
+      ),
+    },
+    {
+      title: "Submitted At",
+      key: "submitted_at",
+      render: (_, record) => (
+        <Text>{record.submitted_at ? new Date(record.submitted_at).toLocaleString() : "Not submitted"}</Text>
+      ),
+    },
+    {
+      title: "Status",
+      key: "status",
+      render: (_, record) => (
+        <Tag color={record.status === "graded" ? "green" : "blue"}>
+          {record.status?.toUpperCase() || "-"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Grade",
+      key: "grade",
+      render: (_, record) => (
+        record.grade ? (
+          <Tag color={record.grade.score >= 5 ? "green" : "red"}>
+            {record.grade.score}/10
+          </Tag>
+        ) : (
+          <Text type="secondary">Not graded</Text>
+        )
+      ),
+    },
+    {
+      title: "Graded At",
+      key: "graded_at",
+      render: (_, record) => (
+        record.grade?.graded_at ? (
+          <Text>{new Date(record.grade.graded_at).toLocaleString()}</Text>
+        ) : (
+          <Text type="secondary">-</Text>
+        )
+      ),
+    },
+    {
+      title: "Graded By",
+      key: "graded_by",
+      render: (_, record) => (
+        record.grade?.graded_by ? (
+          <Space>
+            <Avatar
+              size={24}
+              src={
+                record.grade.graded_by?.avatar_path
+                  ? `${staticURL}/${record.grade.graded_by.avatar_path}`
+                  : "/default-avatar.png"
+              }
+              icon={<UserOutlined />}
+            />
+            <Text>
+              {record.grade.graded_by?.first_name} {record.grade.graded_by?.last_name}
+            </Text>
+          </Space>
+        ) : (
+          <Text type="secondary">-</Text>
+        )
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          {record.attachments?.length > 0 && (
+            <Tooltip title="View Submission">
+              <Button
+                type="link"
+                icon={<EyeOutlined />}
+                onClick={() => navigate(`${effectiveBasePath}/submission/${record._id}`)}
+              />
+            </Tooltip>
+          )}
+        </Space>
+      ),
+    },
+  ];
+
   const tabItems = useMemo(() => {
     if (!classInfo) return [];
 
@@ -1713,7 +1901,7 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                             <Space>
                               <ClockCircleOutlined />
                               <Text type="secondary">
-                                Due:{" "}
+                                Due: {" "}
                                 {new Date(assignment.duedate).toLocaleString()}
                               </Text>
                             </Space>
@@ -1726,57 +1914,6 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                               </Typography.Paragraph>
                             )}
 
-                            {/* Submission Status Section */}
-                            <Row justify="space-between" align="middle">
-  <Col>
-    {console.log("Rendering assignment:", assignment._id, "submission:", assignmentSubmissions[assignment._id])}
-    {assignmentSubmissions[assignment._id] ? (
-      <Space direction="vertical" size="small">
-        <Space>
-          <Text type="secondary">Submitted at:</Text>
-          <Text strong>
-            {new Date(assignmentSubmissions[assignment._id].submitted_at).toLocaleString()}
-          </Text>
-          <Tag color={assignmentSubmissions[assignment._id].status === "graded" ? "green" : "blue"}>
-            {assignmentSubmissions[assignment._id].status.toUpperCase()}
-          </Tag>
-        </Space>
-        {assignmentSubmissions[assignment._id].attachments?.length > 0 && (
-          <Button
-            type="link"
-            icon={<DownloadOutlined />}
-            onClick={() =>
-              window.open(
-                `${staticURL}/${assignmentSubmissions[assignment._id].attachments[0].file_path}`,
-                "_blank"
-              )
-            }
-          >
-            Download Submission ({assignmentSubmissions[assignment._id].attachments[0].file_name})
-          </Button>
-        )}
-      </Space>
-    ) : (
-      <Text type="secondary">Not submitted yet</Text>
-    )}
-  </Col>
-  <Col>
-    {permissions.canSubmitAssignment && (
-      <Button
-        type="primary"
-        onClick={() => handleSubmissionClick(assignment)}
-        disabled={new Date(assignment.duedate) < new Date()}
-      >
-        {assignmentSubmissions[assignment._id]
-          ? "Update Submission"
-          : "Create Submission"}
-      </Button>
-    )}
-  </Col>
-</Row>
-
-                            <Divider />
-
                             {/* Assignment Files Section */}
                             {assignment.attachments?.length > 0 && (
                               <div>
@@ -1787,6 +1924,56 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                   attachments={assignment.attachments}
                                 />
                               </div>
+                            )}
+
+                            {/* Submission Status Section - Chỉ hiển thị cho student */}
+                            {user?.role === "student" && (
+                              <Row justify="space-between" align="middle">
+                                <Col>
+                                  {assignmentSubmissions[assignment._id] ? (
+                                    <Space direction="vertical" size="small">
+                                      <Space>
+                                        <Text type="secondary">Submitted at:</Text>
+                                        <Text strong>
+                                          {new Date(assignmentSubmissions[assignment._id].submitted_at).toLocaleString()}
+                                        </Text>
+                                        <Tag color={assignmentSubmissions[assignment._id]?.status === "graded" ? "green" : "blue"}>
+                                          {assignmentSubmissions[assignment._id]?.status?.toUpperCase() || "UNKNOWN"}
+                                        </Tag>
+                                      </Space>
+                                      {assignmentSubmissions[assignment._id]?.attachments?.length > 0 && (
+                                        <Button
+                                          type="link"
+                                          icon={<DownloadOutlined />}
+                                          onClick={() =>
+                                            window.open(
+                                              `${staticURL}/${assignmentSubmissions[assignment._id].attachments[0].file_path}`,
+                                              "_blank"
+                                            )
+                                          }
+                                        >
+                                          Download Submission ({assignmentSubmissions[assignment._id].attachments[0].file_name})
+                                        </Button>
+                                      )}
+                                    </Space>
+                                  ) : (
+                                    <Text type="secondary">Not submitted yet</Text>
+                                  )}
+                                </Col>
+                                <Col>
+                                  {permissions.canSubmitAssignment && (
+                                    <Button
+                                      type="primary"
+                                      onClick={() => handleSubmissionClick(assignment)}
+                                      disabled={new Date(assignment.duedate) < new Date()}
+                                    >
+                                      {assignmentSubmissions[assignment._id]
+                                        ? "Update Submission"
+                                        : "Create Submission"}
+                                    </Button>
+                                  )}
+                                </Col>
+                              </Row>
                             )}
                           </Space>
                         </Card>
@@ -1801,6 +1988,132 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           },
         ]
       : [];
+
+    // Kiểm tra quyền xem submissions
+    const canViewSubmissions = user?.role === "admin" || 
+                             user?.role === "staff" || 
+                             classInfo?.tutors?.some(tutor => tutor.tutor_id.user_id._id === user?._id);
+
+    // Thêm tab Submissions nếu có quyền
+    if (canViewSubmissions) {
+      const ungradedCount = filteredSubmissions.filter(sub => sub.status !== "graded").length;
+      additionalItems.push({
+        key: "7",
+        label: (
+          <span>
+            <FileTextOutlined style={{ marginRight: 3 }} />
+            Submissions ({ungradedCount})
+          </span>
+        ),
+        children: (
+          <div style={{ padding: "24px 0" }}>
+            <Space direction="vertical" style={{ width: "100%" }} size="large">
+              <Space>
+                <Text strong>Filter by Assignment:</Text>
+                <Select
+                  style={{ width: 200 }}
+                  value={selectedAssignmentFilter}
+                  onChange={setSelectedAssignmentFilter}
+                >
+                  <Select.Option value="all">All Assignments</Select.Option>
+                  {assignments.map(assignment => (
+                    <Select.Option key={assignment._id} value={assignment._id}>
+                      {assignment.title}
+                    </Select.Option>
+                  ))}
+                </Select>
+                <Input.Search
+                  placeholder="Search by student name or code"
+                  style={{ width: 300 }}
+                  value={searchText}
+                  onChange={e => setSearchText(e.target.value)}
+                  allowClear
+                />
+              </Space>
+
+              {/* Thêm phần hiển thị học viên chưa nộp bài */}
+              {selectedAssignmentFilter !== "all" && (
+                <Card 
+                  title={
+                    <Space>
+                      <WarningOutlined style={{ color: '#faad14' }} />
+                      <Text strong>Students Who Haven't Submitted</Text>
+                    </Space>
+                  }
+                  size="small"
+                >
+                  <Table
+                    columns={[
+                      {
+                        title: "Student",
+                        key: "student",
+                        render: (_, record) => (
+                          <Space>
+                            <Avatar
+                              size={40}
+                              src={
+                                record.student_id?.user_id?.avatar_path
+                                  ? `${staticURL}/${record.student_id.user_id.avatar_path}`
+                                  : "/default-avatar.png"
+                              }
+                              icon={<UserOutlined />}
+                            />
+                            <Space direction="vertical" size={0}>
+                              <Text strong>
+                                {record.student_id?.user_id?.first_name} {record.student_id?.user_id?.last_name}
+                              </Text>
+                              <Text type="secondary">{record.student_id?.student_code}</Text>
+                            </Space>
+                          </Space>
+                        ),
+                      },
+                      {
+                        title: "Email",
+                        key: "email",
+                        render: (_, record) => (
+                          <Text>{record.student_id?.user_id?.email}</Text>
+                        ),
+                      },
+                      {
+                        title: "Status",
+                        key: "status",
+                        render: () => (
+                          <Tag color="warning">Not Submitted</Tag>
+                        ),
+                      },
+                    ]}
+                    dataSource={classInfo.enrollments.filter(enrollment => {
+                      // Lọc ra những học viên chưa nộp bài cho assignment được chọn
+                      const hasSubmission = filteredSubmissions.some(
+                        sub => sub.student_id._id === enrollment.student_id._id && 
+                               sub.assignment_id._id === selectedAssignmentFilter
+                      );
+                      return !hasSubmission;
+                    })}
+                    rowKey={record => record.student_id._id}
+                    pagination={{
+                      showSizeChanger: true,
+                      showTotal: (total) => `Total ${total} students haven't submitted`,
+                    }}
+                  />
+                </Card>
+              )}
+
+              <Table
+                columns={submissionColumns}
+                dataSource={filteredSubmissions}
+                rowKey="_id"
+                loading={loadingSubmissions}
+                pagination={{
+                  showSizeChanger: true,
+                  showTotal: (total) => `Total ${total} submissions`,
+                }}
+              />
+            </Space>
+          </div>
+        ),
+      });
+    }
 
     return [...baseItems, ...additionalItems];
   }, [
@@ -1817,6 +2130,12 @@ const ClassDetail = ({ basePath, customPermissions }) => {
     effectiveBasePath,
     id,
     assignmentSubmissions,
+    user,
+    allSubmissions,
+    loadingSubmissions,
+    selectedAssignmentFilter,
+    filteredSubmissions,
+    searchText,
   ]);
 
   if (loading) {

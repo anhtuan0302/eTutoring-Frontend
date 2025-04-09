@@ -17,6 +17,7 @@ import { ListClassSchedulesPage } from "../pages/admin/education/classSchedule";
 import { ListAttendancePage } from "../pages/admin/education/attendance";
 import { ListEnrollmentsPage, CreateEnrollmentPage, DetailEnrollmentPage, UpdateEnrollmentPage } from "../pages/admin/education/enrollment";
 import { ListClassTutorsPage, CreateClassTutorPage } from "../pages/admin/education/classTutor";
+import { SubmissionDetailPage } from "../pages/admin/education/submission";
 
 import { PostPage } from "../pages/admin/blog/post";
 import { MessagePage } from "../pages/admin/communication/message";
@@ -65,6 +66,8 @@ const AdminRoutes = () => {
             <Route path="enrollment/create" element={<CreateEnrollmentPage />} />
             <Route path="enrollment/:id" element={<DetailEnrollmentPage />} />
             <Route path="enrollment/:id/edit" element={<UpdateEnrollmentPage />} />
+
+            <Route path="submission/:id" element={<SubmissionDetailPage />} />
 
             <Route path="message" element={<MessagePage />} />
             <Route path="post" element={<PostPage />} />
