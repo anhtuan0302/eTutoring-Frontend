@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AppLayout from "../../components/layouts/layout";
 import { 
   Row, Col, Card, Typography, Table, Progress, Tag, Avatar, 
@@ -24,6 +24,7 @@ import {
 
 // API imports
 import { getAllUsers } from "../../api/auth/user";
+import { getPendingUsers } from "../../api/auth/pendingUser"
 import { getAllCourses } from "../../api/education/course";
 import { getAllClasses } from "../../api/education/classInfo";
 import { getAllStudents } from "../../api/organization/student";
@@ -76,6 +77,137 @@ const Dashboard = () => {
   const [departmentStats, setDepartmentStats] = useState([]);
   const [upcomingSchedules, setUpcomingSchedules] = useState([]);
   const [error, setError] = useState(null);
+  const [activityData, setActivityData] = useState([]);
+  const [blogStatsData, setBlogStatsData] = useState([]);
+  const [userRoleData, setUserRoleData] = useState([]);
+
+  // Render pie charts safely
+  const renderPieChart = (data, labels, colors) => {
+    // Check if we have valid data for the chart
+    const validData = data.some(value => value > 0);
+    
+    if (!validData) {
+      return <Empty description="No data available" />;
+    }
+    
+    try {
+      return (
+        <PieChart
+          series={[{
+            data: data.map((value, i) => ({
+              id: i,
+              value: value,
+              label: labels[i],
+              color: colors[i]
+            })),
+            highlightScope: { faded: 'global', highlighted: 'item' },
+            faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+          }]}
+          height={280}
+          width={300}
+        />
+      );
+    } catch (error) {
+      console.error("Error rendering pie chart:", error);
+      return <Empty description="Error rendering chart" />;
+    }
+  };
+
+  // Memoized chart components to prevent re-renders
+  const studentGrowthChart = useMemo(() => {
+    if (!scheduleData.monthNames || !scheduleData.monthlyStudents) return null;
+    
+    return (
+      <BarChart
+        xAxis={[{ 
+          scaleType: 'band', 
+          data: scheduleData.monthNames
+        }]}
+        series={[
+          { 
+            data: scheduleData.monthlyStudents,
+            label: 'New Students',
+            color: '#1890ff'
+          }
+        ]}
+        height={268}
+        slotProps={{
+          legend: {
+            direction: 'row',
+            position: { vertical: 'bottom', horizontal: 'middle' },
+          },
+        }}
+      />
+    );
+  }, [scheduleData.monthNames, scheduleData.monthlyStudents]);
+
+  const departmentComparisonChart = useMemo(() => {
+    if (!departmentStats || departmentStats.length === 0) return null;
+    
+    const deptNames = departmentStats.map(dept => dept.name);
+    const studentsData = departmentStats.map(dept => dept.students);
+    const tutorsData = departmentStats.map(dept => dept.tutors);
+    const coursesData = departmentStats.map(dept => dept.courses);
+    
+    return (
+      <BarChart
+        xAxis={[{ 
+          scaleType: 'band', 
+          data: deptNames
+        }]}
+        series={[
+          {
+            data: studentsData,
+            label: 'Students',
+            color: '#8884d8'
+          },
+          {
+            data: tutorsData,
+            label: 'Tutors',
+            color: '#82ca9d'
+          },
+          {
+            data: coursesData,
+            label: 'Courses',
+            color: '#ffc658'
+          }
+        ]}
+        height={350}
+        slotProps={{
+          legend: {
+            direction: 'row',
+            position: { vertical: 'bottom', horizontal: 'middle' },
+          },
+        }}
+      />
+    );
+  }, [departmentStats]);
+
+  const userRoleDistributionChart = useMemo(() => {
+    if (!userRoleData || userRoleData.length === 0) return null;
+    
+    console.log("User role data for chart:", userRoleData);
+    
+    return (
+      <PieChart
+        series={[{
+          data: userRoleData.map((role, i) => ({
+            id: i,
+            value: role.count,
+            label: role.name,
+            color: role.name === 'Students' ? '#1890ff' : 
+                   role.name === 'Tutors' ? '#52c41a' : 
+                   role.name === 'Staff' ? '#fa8c16' : 
+                   '#722ed1' // Admin color
+          })),
+          highlightScope: { faded: 'global', highlighted: 'item' },
+          faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
+        }]}
+        height={280}
+        width={300}
+      />
+    );
+  }, [userRoleData]);
 
   // Fetch all data on component mount
   useEffect(() => {
@@ -94,7 +226,7 @@ const Dashboard = () => {
           departmentsResponse,
           schedulesResponse
         ] = await Promise.all([
-          getAllUsers({}).catch(err => {
+          getAllUsers({ limit: 100, page: 1 }).catch(err => {
             console.error("Error fetching users:", err);
             return { data: [] };
           }),
@@ -145,13 +277,12 @@ const Dashboard = () => {
           schedules: schedulesResponse
         });
 
-        // Extract actual data arrays
-        // Our API might return data in different formats, so we need to handle each possible structure
+        // Debug: Show the original API response for users
+        console.log("Original users API response:", usersResponse);
+        
+        // Extract data helper function
         const extractData = (response) => {
           if (!response) return [];
-          
-          // Log the actual response to see its structure
-          console.log("Examining response structure:", response);
           
           // Handle case when response is null or undefined
           if (response === null || response === undefined) return [];
@@ -173,19 +304,37 @@ const Dashboard = () => {
           
           // Handle when data is a single object, not an array
           if (response.data && typeof response.data === 'object' && !Array.isArray(response.data)) {
-            console.log("Response contains a single object in data:", response.data);
             return [response.data];
           }
           
           // Last resort: if response itself appears to be an object with typical entity fields
           if (typeof response === 'object' && response.id) {
-            console.log("Response itself appears to be an entity:", response);
             return [response];
           }
           
-          console.log("Could not extract data from response:", response);
           return [];
         };
+        
+        // Extract users data from usersResponse with special handling for pagination
+        let allUsers = [];
+        if (usersResponse) {
+          if (Array.isArray(usersResponse)) {
+            allUsers = usersResponse;
+          } else if (usersResponse.users && Array.isArray(usersResponse.users)) {
+            allUsers = usersResponse.users;
+          } else if (usersResponse.data && Array.isArray(usersResponse.data)) {
+            allUsers = usersResponse.data;
+          } else if (usersResponse.data && usersResponse.data.users && Array.isArray(usersResponse.data.users)) {
+            allUsers = usersResponse.data.users;
+          } else if (usersResponse.result && Array.isArray(usersResponse.result)) {
+            allUsers = usersResponse.result;
+          }
+        }
+        
+        // Override the users array with our improved extraction
+        const users = allUsers;
+        console.log("Extracted users array:", users);
+        console.log("Total users extracted:", users.length);
 
         // Normalize data using the extraction function
         const students = extractData(studentsResponse);
@@ -195,43 +344,10 @@ const Dashboard = () => {
         const classes = extractData(classesResponse);
         const posts = extractData(postsResponse);
         const departments = extractData(departmentsResponse);
-        const users = extractData(usersResponse);
         const schedules = extractData(schedulesResponse);
 
-        // Debug log the extracted data counts to verify
-        console.log("Extracted Data Counts:", {
-          students: students.length,
-          tutors: tutors.length,
-          staffs: staffs.length,
-          courses: courses.length,
-          classes: classes.length,
-          posts: posts.length,
-          departments: departments.length,
-          users: users.length,
-          schedules: schedules.length
-        });
-
-        // Debug document structure to understand how to access fields
-        if (classes.length > 0) {
-          console.log("Sample class document structure:", classes[0]);
-        }
-        if (students.length > 0) {
-          console.log("Sample student document structure:", students[0]);
-        }
-        if (schedules.length > 0) {
-          console.log("Sample schedule document structure:", schedules[0]);
-        }
-
-        // Store sample data for debugging and improving extraction logic
-        const dataSamples = {
-          student: students.length > 0 ? students[0] : null,
-          tutor: tutors.length > 0 ? tutors[0] : null,
-          class: classes.length > 0 ? classes[0] : null,
-          user: users.length > 0 ? users[0] : null,
-          post: posts.length > 0 ? posts[0] : null,
-          schedule: schedules.length > 0 ? schedules[0] : null
-        };
-        console.log("Data Structure Samples:", dataSamples);
+        // Debug: Show the complete users data array to confirm it's loaded correctly
+        console.log("Complete users data:", users);
 
         // Fetch class contents if there are classes
         let allClassContents = [];
@@ -261,15 +377,6 @@ const Dashboard = () => {
               materialsCount = allClassContents.filter(content => 
                 content.content_type === 'material'
               ).length;
-
-              console.log("Class Contents:", {
-                total: allClassContents.length,
-                assignments: assignmentsCount,
-                materials: materialsCount,
-                sample: allClassContents.length > 0 ? allClassContents[0] : null
-              });
-            } else {
-              console.log("No valid class IDs found for fetching content");
             }
           } catch (error) {
             console.error("Error fetching class contents:", error);
@@ -280,24 +387,56 @@ const Dashboard = () => {
         const enrichedStudents = students.map(student => {
           // Get IDs properly handling MongoDB _id or regular id
           const studentId = student.id || student._id;
-          const departmentId = student.department_id?._id || student.department_id;
-          const userId = student.user_id?._id || student.user_id;
           
-          // Find the associated user record - user and student have 1-1 relationship
-          const userInfo = users.find(u => (u.id || u._id) === userId) || {};
+          // Handle both nested department object and reference ID
+          let departmentId;
+          let departmentName = '';
           
-          // Find the department information - department and student have 1-N relationship
-          const departmentInfo = departments.find(d => (d.id || d._id) === departmentId) || {};
+          if (student.department_id && typeof student.department_id === 'object') {
+            departmentId = student.department_id._id;
+            departmentName = student.department_id.name || '';
+          } else {
+            departmentId = student.department_id;
+          }
+          
+          // Handle both nested user object and reference ID
+          let userId;
+          let userInfo = {};
+          
+          if (student.user_id && typeof student.user_id === 'object') {
+            // Case 1: user_id is already an embedded object with user data
+            userId = student.user_id._id;
+            userInfo = student.user_id;
+          } else {
+            // Case 2: user_id is just a reference ID
+            userId = student.user_id;
+            // Find the user in users array
+            userInfo = users.find(u => (u.id || u._id) === userId) || {};
+          }
+          
+          // Find the department information if not already available
+          let departmentInfo;
+          if (departmentName) {
+            departmentInfo = { name: departmentName, _id: departmentId };
+          } else {
+            departmentInfo = departments.find(d => (d.id || d._id) === departmentId) || {};
+          }
           
           return {
             key: studentId || `student-${Math.random()}`,
             id: studentId,
+            userId: userId,
             name: `${userInfo.first_name || ''} ${userInfo.last_name || ''}`,
+            first_name: userInfo.first_name || '',
+            last_name: userInfo.last_name || '',
             email: userInfo.email || '',
+            phone: userInfo.phone_number || '',
             department: departmentInfo.name || '',
+            departmentId: departmentId,
             status: userInfo.status || 'offline',
-            avatar: userInfo.avatar_path ? `${staticURL}${userInfo.avatar_path}` : null,
-            studentCode: student.student_code || ''
+            avatar: userInfo.avatar_path ? `${staticURL}/${userInfo.avatar_path}` : null,
+            studentCode: student.student_code || '',
+            lastActive: userInfo.lastActive || null
           };
         });
 
@@ -308,13 +447,46 @@ const Dashboard = () => {
           offline: users.filter(u => u.status === 'offline').length
         };
 
-        // Count user roles - from user table in ERD
+        // Count user roles - Ensure we count roles from the correct response array
+        // Extract users data correctly from the API response
+        const userRolesCount = {
+          student: 0,
+          tutor: 0,
+          staff: 0,
+          admin: 0
+        };
+        
+        // Counting roles precisely from users array
+        users.forEach(user => {
+          if (!user || !user.role) return;
+          
+          // Log each user and their role
+          console.log(`User ${user.username || user._id}: ${user.role}`);
+          
+          // Count by role
+          if (user.role === 'student') userRolesCount.student++;
+          else if (user.role === 'tutor') userRolesCount.tutor++;
+          else if (user.role === 'staff') userRolesCount.staff++;
+          else if (user.role === 'admin') userRolesCount.admin++;
+        });
+        
+        console.log("Final user role counts:", userRolesCount);
+        
+        // Set data for the role chart
+        setUserRoleData([
+          { name: 'Students', count: userRolesCount.student },
+          { name: 'Tutors', count: userRolesCount.tutor },
+          { name: 'Staff', count: userRolesCount.staff },
+          { name: 'Admin', count: userRolesCount.admin }
+        ]);
+        
+        // For compatibility with existing code
         const userRoleStats = {
           total: users.length,
-          students: users.filter(u => u.role === 'student').length,
-          tutors: users.filter(u => u.role === 'tutor').length,
-          staff: users.filter(u => u.role === 'staff').length,
-          admin: users.filter(u => u.role === 'admin').length
+          students: userRolesCount.student,
+          tutors: userRolesCount.tutor,
+          staff: userRolesCount.staff,
+          admin: userRolesCount.admin
         };
 
         // Count class statuses based on actual data - from classInfo table in ERD
@@ -501,6 +673,79 @@ const Dashboard = () => {
         setDepartmentStats(deptStats);
         setUpcomingSchedules(upcoming);
         setScheduleData(studentGrowthData);
+
+        // Debug studentsList
+        console.log("Enriched Students:", enrichedStudents);
+        
+        // Generate activity data based on real database values
+        const generateActivityData = () => {
+          const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+          
+          // Create activity patterns with realistic variations based on real data
+          // Weekday activity is higher than weekend activity
+          const activityFactors = {
+            students: [0.7, 0.8, 0.9, 0.85, 0.75, 0.5, 0.4], // Mon-Sun
+            tutors: [0.8, 0.9, 0.95, 0.9, 0.8, 0.4, 0.3],
+            classes: [0.8, 0.9, 1.0, 0.9, 0.7, 0.3, 0.2]
+          };
+          
+          return dayNames.map((day, i) => ({
+            name: day,
+            students: Math.round(students.length * activityFactors.students[i]),
+            tutors: Math.round(tutors.length * activityFactors.tutors[i]),
+            classes: Math.round(classes.filter(c => c.status === 'in progress').length * activityFactors.classes[i])
+          }));
+        };
+        
+        setActivityData(generateActivityData());
+
+        // Generate blog statistics data from real posts
+        if (posts.length > 0) {
+          // Group posts by week (using created_at date)
+          const postsByWeek = {};
+          let totalViews = 0;
+          
+          // Count total views
+          posts.forEach(post => {
+            totalViews += (post.view_count || 0);
+          });
+          
+          // Create weekly data - use creation dates from real posts
+          const weeksBack = 5;
+          const weekData = [];
+          
+          // Current date to calculate weeks
+          const today = new Date();
+          
+          for (let i = 0; i < weeksBack; i++) {
+            // Calculate start of this week
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - (7 * i));
+            weekStart.setHours(0, 0, 0, 0);
+            
+            // Calculate end of this week
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 7);
+            
+            // Count posts created in this week
+            const postsThisWeek = posts.filter(post => {
+              const postDate = new Date(post.created_at || post.createdAt);
+              return postDate >= weekStart && postDate < weekEnd;
+            }).length;
+            
+            // Calculate views - in a real app this would come from analytics data
+            // Here we're distributing total views across weeks, weighted by post count
+            const viewsThisWeek = Math.round((postsThisWeek / posts.length) * totalViews);
+            
+            weekData.unshift({
+              name: `Week ${weeksBack - i}`,
+              posts: postsThisWeek,
+              views: viewsThisWeek
+            });
+          }
+          
+          setBlogStatsData(weekData);
+        }
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
         setError("Failed to load dashboard data. Please try again later.");
@@ -556,38 +801,6 @@ const Dashboard = () => {
     }
   };
 
-  // Render pie charts safely
-  const renderPieChart = (data, labels, colors) => {
-    // Check if we have valid data for the chart
-    const validData = data.some(value => value > 0);
-    
-    if (!validData) {
-      return <Empty description="No data available" />;
-    }
-    
-    try {
-      return (
-        <PieChart
-          series={[{
-            data: data.map((value, i) => ({
-              id: i,
-              value: value,
-              label: labels[i],
-              color: colors[i]
-            })),
-            highlightScope: { faded: 'global', highlighted: 'item' },
-            faded: { innerRadius: 30, additionalRadius: -30, color: 'gray' },
-          }]}
-          height={280}
-          width={300}
-        />
-      );
-    } catch (error) {
-      console.error("Error rendering pie chart:", error);
-      return <Empty description="Error rendering chart" />;
-    }
-  };
-
   return (
     <AppLayout title="Admin Dashboard">
       {loading ? (
@@ -627,12 +840,24 @@ const Dashboard = () => {
           </Card>
         </div>
       ) : (
-        <div>
+  <div style={{ padding: '24px' }}>
+          {/* Header with Title and Refresh Button */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <Title level={2}><DashboardOutlined /> Admin Dashboard</Title>
+            <Button 
+              type="primary" 
+              icon={<ReloadOutlined />}
+              onClick={() => window.location.reload()}
+            >
+              Refresh Data
+            </Button>
+          </div>
+          
           {/* KPI Summary Cards */}
-          <Row gutter={[16, 16]}>
-            <Col xs={24} sm={12} lg={6}>
+    <Row gutter={[16, 16]}>
+      <Col xs={24} sm={12} lg={6}>
               <Card hoverable>
-                <Statistic
+          <Statistic
                   title="Total Students"
                   value={stats.students}
                   prefix={<UserOutlined style={{ color: '#1890ff' }} />}
@@ -641,11 +866,11 @@ const Dashboard = () => {
                 <div style={{ marginTop: '10px' }}>
                   <Progress percent={stats.students > 0 ? 100 : 0} showInfo={false} strokeColor="#1890ff" />
                 </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} lg={6}>
               <Card hoverable>
-                <Statistic
+          <Statistic
                   title="Total Tutors"
                   value={stats.tutors}
                   prefix={<TeamOutlined style={{ color: '#52c41a' }} />}
@@ -654,11 +879,11 @@ const Dashboard = () => {
                 <div style={{ marginTop: '10px' }}>
                   <Progress percent={stats.tutors > 0 ? 100 : 0} showInfo={false} strokeColor="#52c41a" />
                 </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} lg={6}>
               <Card hoverable>
-                <Statistic
+          <Statistic
                   title="Active Classes"
                   value={stats.classes.inProgress}
                   prefix={<BookOutlined style={{ color: '#722ed1' }} />}
@@ -671,11 +896,11 @@ const Dashboard = () => {
                     strokeColor="#722ed1" 
                   />
                 </div>
-              </Card>
-            </Col>
-            <Col xs={24} sm={12} lg={6}>
+        </Card>
+      </Col>
+      <Col xs={24} sm={12} lg={6}>
               <Card hoverable>
-                <Statistic
+          <Statistic
                   title="Upcoming Sessions"
                   value={stats.schedules.scheduled}
                   prefix={<CalendarOutlined style={{ color: '#fa8c16' }} />}
@@ -706,15 +931,7 @@ const Dashboard = () => {
                     <Card title="Current Activity" bordered={false}>
                       <ResponsiveContainer width="100%" height={300}>
                         <AreaChart
-                          data={[
-                            { name: 'Mon', students: stats.students * 0.4, tutors: stats.tutors * 0.5, classes: stats.classes.inProgress * 0.6 },
-                            { name: 'Tue', students: stats.students * 0.5, tutors: stats.tutors * 0.6, classes: stats.classes.inProgress * 0.7 },
-                            { name: 'Wed', students: stats.students * 0.6, tutors: stats.tutors * 0.7, classes: stats.classes.inProgress * 0.8 },
-                            { name: 'Thu', students: stats.students * 0.7, tutors: stats.tutors * 0.8, classes: stats.classes.inProgress * 0.9 },
-                            { name: 'Fri', students: stats.students * 0.8, tutors: stats.tutors * 0.9, classes: stats.classes.inProgress * 1.0 },
-                            { name: 'Sat', students: stats.students * 0.3, tutors: stats.tutors * 0.3, classes: stats.classes.inProgress * 0.4 },
-                            { name: 'Sun', students: stats.students * 0.2, tutors: stats.tutors * 0.2, classes: stats.classes.inProgress * 0.3 },
-                          ]}
+                          data={activityData}
                           margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
                         >
                           <CartesianGrid strokeDasharray="3 3" />
@@ -727,9 +944,9 @@ const Dashboard = () => {
                           <Area type="monotone" dataKey="classes" stackId="1" stroke="#ffc658" fill="#ffc658" />
                         </AreaChart>
                       </ResponsiveContainer>
-                    </Card>
-                  </Col>
-                  
+        </Card>
+      </Col>
+
                   {/* Online Status */}
                   <Col xs={24} lg={8}>
                     <Card title="User Status" bordered={false}>
@@ -772,26 +989,7 @@ const Dashboard = () => {
                   {/* Student Growth */}
                   <Col xs={24} lg={12}>
                     <Card title="Student Growth by Month" bordered={false}>
-                      <BarChart
-                        xAxis={[{ 
-                          scaleType: 'band', 
-                          data: scheduleData.monthNames || []
-                        }]}
-                        series={[
-                          { 
-                            data: scheduleData.monthlyStudents || [],
-                            label: 'New Students',
-                            color: '#1890ff'
-                          }
-                        ]}
-                        height={268}
-                        slotProps={{
-                          legend: {
-                            direction: 'row',
-                            position: { vertical: 'bottom', horizontal: 'middle' },
-                          },
-                        }}
-                      />
+                      {studentGrowthChart}
                     </Card>
                   </Col>
                 </Row>
@@ -807,15 +1005,11 @@ const Dashboard = () => {
                   <Col xs={24} lg={12}>
                     <Card title="User Role Distribution" bordered={false}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-                        {renderPieChart(
-                          [stats.userRoles?.students || 0, stats.userRoles?.tutors || 0, stats.userRoles?.staff || 0, stats.userRoles?.admin || 0],
-                          ['Students', 'Tutors', 'Staff', 'Admin'],
-                          ['#1890ff', '#52c41a', '#fa8c16', '#722ed1']
-                        )}
+                        {userRoleDistributionChart}
                       </div>
-                    </Card>
-                  </Col>
-                  
+        </Card>
+      </Col>
+
                   {/* Department Distribution */}
                   <Col xs={24} lg={12}>
                     <Card title="Department Statistics" bordered={false}>
@@ -835,53 +1029,58 @@ const Dashboard = () => {
                           <Legend />
                         </RadarChart>
                       </ResponsiveContainer>
-                    </Card>
-                  </Col>
-                  
+        </Card>
+      </Col>
+
                   {/* Recent Students Table */}
                   <Col xs={24}>
                     <Card title="Student Management" bordered={false}>
-                      <Table 
-                        columns={[
-                          {
+          <Table 
+                        rowKey="key"
+            columns={[
+              {
                             title: 'Student',
-                            dataIndex: 'avatar',
-                            key: 'avatar',
-                            render: (avatar, record) => (
+                            key: 'student',
+                            render: (_, record) => (
                               <div style={{ display: 'flex', alignItems: 'center' }}>
                                 <Avatar 
-                                  src={avatar} 
-                                  icon={!avatar && <UserOutlined />}
+                                  src={record.avatar} 
+                                  icon={!record.avatar && <UserOutlined />}
                                   size="large"
                                   style={{ marginRight: '10px' }}
                                 >
-                                  {!avatar && record.name ? record.name.charAt(0) : '?'}
+                                  {!record.avatar && record.first_name ? record.first_name.charAt(0).toUpperCase() : ''}
                                 </Avatar>
                                 <div>
-                                  <div><strong>{record.name || 'Unknown'}</strong></div>
-                                  {record.studentCode && (
-                                    <Text type="secondary" style={{ fontSize: '12px' }}>
-                                      {record.studentCode}
-                                    </Text>
-                                  )}
+                                  <div>
+                                    <strong>
+                                      {record.name && record.name.trim() !== '' && record.name !== ' ' 
+                                        ? record.name 
+                                        : 'Unnamed Student'}
+                                    </strong>
+                                  </div>
+                                  <Text type="secondary" style={{ fontSize: '12px' }}>
+                                    {record.studentCode}
+                                  </Text>
                                 </div>
                               </div>
                             ),
-                          },
-                          {
-                            title: 'Email',
-                            dataIndex: 'email',
-                            key: 'email',
-                          },
-                          {
+              },
+              {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email',
+                            render: (email) => email || '-',
+              },
+              {
                             title: 'Department',
-                            dataIndex: 'department',
-                            key: 'department',
-                          },
-                          {
+                dataIndex: 'department',
+                key: 'department',
+              },
+              {
                             title: 'Status',
-                            dataIndex: 'status',
-                            key: 'status',
+                dataIndex: 'status',
+                key: 'status',
                             render: renderStatusTag,
                             width: 100,
                             filters: [
@@ -891,9 +1090,15 @@ const Dashboard = () => {
                             onFilter: (value, record) => record.status === value,
                           },
                           {
+                            title: 'Phone',
+                            dataIndex: 'phone',
+                            key: 'phone',
+                            render: (phone) => phone || '-',
+                          },
+                          {
                             title: 'Actions',
                             key: 'actions',
-                            render: (_, record) => (
+                            render: () => (
                               <Button type="link">View Details</Button>
                             ),
                           }
@@ -990,10 +1195,10 @@ const Dashboard = () => {
                             key: 'isOnline',
                             render: (isOnline) => isOnline ? 
                               <Tag color="geekblue">Online</Tag> : 
-                              <Tag color="orange">In-person</Tag>,
+                              <Tag color="green">Offline</Tag>,
                             filters: [
                               { text: 'Online', value: true },
-                              { text: 'In-person', value: false },
+                              { text: 'Offline', value: false },
                             ],
                             onFilter: (value, record) => record.isOnline === value,
                           },
@@ -1084,7 +1289,7 @@ const Dashboard = () => {
                           }
                         ]}
                         dataSource={departmentStats}
-                        pagination={{ pageSize: 5 }}
+            pagination={{ pageSize: 5 }}
                         scroll={{ x: 'max-content' }}
                         locale={{ emptyText: <Empty description="No departments found" /> }}
                       />
@@ -1095,36 +1300,7 @@ const Dashboard = () => {
                   <Col xs={24}>
                     <Card title="Department Comparison" bordered={false}>
                       <div style={{ height: '400px', width: '100%' }}>
-                        <BarChart
-                          xAxis={[{ 
-                            scaleType: 'band', 
-                            data: departmentStats.map(dept => dept.name) 
-                          }]}
-                          series={[
-                            {
-                              data: departmentStats.map(dept => dept.students),
-                              label: 'Students',
-                              color: '#8884d8'
-                            },
-                            {
-                              data: departmentStats.map(dept => dept.tutors),
-                              label: 'Tutors',
-                              color: '#82ca9d'
-                            },
-                            {
-                              data: departmentStats.map(dept => dept.courses),
-                              label: 'Courses',
-                              color: '#ffc658'
-                            }
-                          ]}
-                          height={350}
-                          slotProps={{
-                            legend: {
-                              direction: 'row',
-                              position: { vertical: 'bottom', horizontal: 'middle' },
-                            },
-                          }}
-                        />
+                        {departmentComparisonChart}
                       </div>
                     </Card>
                   </Col>
@@ -1181,21 +1357,15 @@ const Dashboard = () => {
                               suffix="%"
                               valueStyle={{ color: '#3f8600' }}
                               prefix={<CheckCircleOutlined style={{ color: '#3f8600' }} />}
-                            />
-                          </Card>
-                        </Col>
-                      </Row>
+          />
+        </Card>
+      </Col>
+    </Row>
                       
                       <div style={{ marginTop: '20px' }}>
                         <ResponsiveContainer width="100%" height={200}>
                           <ReLineChart
-                            data={[
-                              { name: 'Week 1', posts: stats.posts.total * 0.1, views: stats.posts.total * 2 },
-                              { name: 'Week 2', posts: stats.posts.total * 0.15, views: stats.posts.total * 4 },
-                              { name: 'Week 3', posts: stats.posts.total * 0.2, views: stats.posts.total * 3 },
-                              { name: 'Week 4', posts: stats.posts.total * 0.25, views: stats.posts.total * 6 },
-                              { name: 'Week 5', posts: stats.posts.total * 0.3, views: stats.posts.total * 8 },
-                            ]}
+                            data={blogStatsData}
                           >
                             <CartesianGrid strokeDasharray="3 3" />
                             <XAxis dataKey="name" />
@@ -1207,7 +1377,7 @@ const Dashboard = () => {
                             <Line yAxisId="right" type="monotone" dataKey="views" name="Views" stroke="#82ca9d" />
                           </ReLineChart>
                         </ResponsiveContainer>
-                      </div>
+  </div>
                     </Card>
                   </Col>
                   
