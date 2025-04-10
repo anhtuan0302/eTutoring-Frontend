@@ -3,8 +3,8 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, serverTimestamp, ref, onValue, off } from "firebase/database";
 import { getAuth, signInAnonymously } from "firebase/auth";
 
-const baseURL = "http://localhost:8000/api";
-const staticURL = "http://localhost:8000";
+const baseURL = process.env.REACT_APP_API_URL;
+const staticURL = process.env.REACT_APP_STATIC_URL;
 
 // Firebase config
 const firebaseConfig = {
