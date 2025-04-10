@@ -2,21 +2,20 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 
 const ProtectedRoute = ({ children, roles, isPublic = false }) => {
-  const { user, isAuthenticated, loading } = useAuth(); // Thêm loading vào đây
+  const { user, isAuthenticated, loading } = useAuth();
   const location = useLocation();
 
   const isInvitationRoute = location.pathname.startsWith('/invitation');
 
-  // Thêm loading check
+  // Loading
   if (loading) {
-    // Có thể return một loading spinner hoặc null
-    return null; // hoặc return <LoadingSpinner />
+    return null;
   }
 
-  // Xử lý public route (như trang login)
+  // Handle public route
   if (isPublic || isInvitationRoute) {
-    if (isAuthenticated && !isInvitationRoute) {
-      // Redirect nếu đã đăng nhập (trừ trang invitation)
+      if (isAuthenticated && !isInvitationRoute) {
+        // Redirect nếu đã đăng nhập (trừ trang invitation)
       if (location.state?.from) {
         return <Navigate to={location.state.from} replace />;
       }
@@ -29,7 +28,7 @@ const ProtectedRoute = ({ children, roles, isPublic = false }) => {
     return children;
   }
 
-  // Xử lý protected route
+  // Handle protected route
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location.pathname }} replace />;
   }

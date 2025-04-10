@@ -38,7 +38,7 @@ import { getContentByClassId } from "../../api/education/classContent";
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
-const Dashboard = () => {
+const AdminDashboard = () => {
   // State for all dashboard data
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -802,7 +802,7 @@ const Dashboard = () => {
   };
 
   return (
-    <AppLayout title="Admin Dashboard">
+    <AppLayout title="Dashboard">
       {loading ? (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '80vh' }}>
           <Spin size="large" tip="Loading dashboard data..." />
@@ -1422,4 +1422,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default AdminDashboard;

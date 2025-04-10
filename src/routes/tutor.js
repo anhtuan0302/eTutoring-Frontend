@@ -3,6 +3,8 @@ import { Route, Routes } from "react-router-dom";
 
 import NotFoundPage from "../pages/notFound";
 
+import TutorDashboard from "../pages/tutor/dashboard";
+
 import { MessagePage } from "../pages/tutor/communication/message";
 import { PostPage } from "../pages/tutor/blog/post";
 import { TutorProfilePage } from "../pages/tutor/auth/profile";
@@ -14,6 +16,9 @@ const TutorRoutes = () => {
 
     return (
         <Routes>
+            <Route path="" element={<TutorDashboard />} />
+            <Route path="dashboard" element={<TutorDashboard />} />
+
             <Route path="profile" element={<TutorProfilePage />} />
             <Route path="message" element={<MessagePage />} />
             <Route path="post" element={<PostPage />} />

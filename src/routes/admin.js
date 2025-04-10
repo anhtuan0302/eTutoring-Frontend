@@ -1,6 +1,6 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import Dashboard from "../pages/admin/dashboard";
+import AdminDashboard from "../pages/admin/dashboard";
 import NotFoundPage from "../pages/notFound";
 
 import { ListPendingUsersPage, CreatePendingUserPage, DetailPendingUserPage } from "../pages/admin/auth/pendingUser";
@@ -29,8 +29,8 @@ const AdminRoutes = () => {
 
     return (
         <Routes>
-            <Route path="" element={<Dashboard />} />
-            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="" element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="department" element={<ListDepartmentsPage />} />
             <Route path="department/create" element={<CreateDepartmentPage />} />
             <Route path="department/:id" element={<DetailDepartmentPage />} />
