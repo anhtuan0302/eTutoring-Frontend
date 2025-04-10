@@ -21,7 +21,9 @@ import {
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import "../styles/login.css";
-//import loginImage from '../assets/login-illustration.svg'; // Thay đổi path tới hình ảnh của bạn
+
+const logoURL = process.env.PUBLIC_URL + "/images/logo.png";
+const bannerURL = process.env.PUBLIC_URL + "/images/banner.jpg";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -487,24 +489,17 @@ const LoginPage = () => {
 
   return (
     <Row style={{ minHeight: "100vh" }}>
-      <Col xs={24} md={12} style={{ padding: "40px" }}>
+      <Col xs={24} md={12} style={{ padding: "20px 40px" }}>
         <div style={{ maxWidth: "450px", margin: "0 auto" }}>
           <div style={{ marginBottom: "40px" }}>
-            <h1
-              style={{ color: "#1890ff", fontSize: "24px", fontWeight: "bold" }}
-            >
-              <span
-                style={{
-                  backgroundColor: "#1890ff",
-                  color: "white",
-                  padding: "5px",
-                  marginRight: "5px",
-                }}
-              >
-                e
-              </span>
-              Tutoring
-            </h1>
+            <img 
+              src={logoURL} 
+              alt="eTutoring Logo" 
+              style={{ 
+                maxWidth: "190px",
+                height: "auto"
+              }} 
+            />
           </div>
           {renderForm()}
         </div>
@@ -518,14 +513,16 @@ const LoginPage = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "40px",
+          padding: "0",
         }}
       >
         <img
-          alt="Login illustration"
+          src={bannerURL}
+          alt="Login Banner"
           style={{
-            maxWidth: "100%",
-            maxHeight: "80vh",
+            width: "100%",
+            height: "100vh",
+            objectFit: "cover"
           }}
         />
       </Col>

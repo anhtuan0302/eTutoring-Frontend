@@ -21,6 +21,9 @@ import {
 } from "../api/auth/pendingUser";
 import Webcam from "react-webcam";
 
+const logoURL = process.env.PUBLIC_URL + "/images/logo.png";
+const bannerURL = process.env.PUBLIC_URL + "/images/banner.jpg";
+
 const { Title, Text } = Typography;
 
 const CompleteRegistrationPage = () => {
@@ -199,7 +202,7 @@ const CompleteRegistrationPage = () => {
       <Text type="secondary" style={{ display: "block", marginBottom: "30px" }}>
         Vui lòng kiểm tra thông tin của bạn
       </Text>
-  
+
       <Card style={{ marginBottom: "24px" }}>
         <Descriptions title="Thông tin tài khoản" column={1}>
           <Descriptions.Item label="Họ và tên">
@@ -215,14 +218,14 @@ const CompleteRegistrationPage = () => {
             {pendingUser.role === "staff" && "Nhân viên"}
           </Descriptions.Item>
           {/* Chỉ hiển thị department nếu không phải admin */}
-          {pendingUser.role !== 'admin' && (
+          {pendingUser.role !== "admin" && (
             <Descriptions.Item label="Khoa/Phòng ban">
               {pendingUser.department?.name}
             </Descriptions.Item>
           )}
         </Descriptions>
       </Card>
-  
+
       <Row gutter={16}>
         <Col span={12}>
           <Button
@@ -456,21 +459,14 @@ const CompleteRegistrationPage = () => {
       <Col xs={24} md={12} style={{ padding: "40px" }}>
         <div style={{ maxWidth: "450px", margin: "0 auto" }}>
           <div style={{ marginBottom: "40px" }}>
-            <h1
-              style={{ color: "#1890ff", fontSize: "24px", fontWeight: "bold" }}
-            >
-              <span
-                style={{
-                  backgroundColor: "#1890ff",
-                  color: "white",
-                  padding: "5px",
-                  marginRight: "5px",
-                }}
-              >
-                e
-              </span>
-              Tutoring
-            </h1>
+            <img
+              src={logoURL}
+              alt="eTutoring Logo"
+              style={{
+                maxWidth: "190px",
+                height: "auto",
+              }}
+            />
           </div>
           {renderContent()}
         </div>
@@ -484,14 +480,16 @@ const CompleteRegistrationPage = () => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "40px",
+          padding: "0",
         }}
       >
         <img
-          alt="Registration illustration"
+          src={bannerURL}
+          alt="Login Banner"
           style={{
-            maxWidth: "100%",
-            maxHeight: "80vh",
+            width: "100%",
+            height: "100vh",
+            objectFit: "cover",
           }}
         />
       </Col>

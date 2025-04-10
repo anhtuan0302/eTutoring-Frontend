@@ -123,94 +123,79 @@ const ListAttendance = ({ basePath, customPermissions }) => {
   }, [classInfo, searchText]);
 
   // Fetch data
-  // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      console.log("Starting fetchData with schedule_id:", schedule_id);
       if (!schedule_id) {
-        console.error("No schedule_id provided");
         return;
       }
       setLoading(true);
 
-      // Bước 1: Lấy thông tin schedule
+      // Step 1: Get schedule information
       const scheduleResponse = await getScheduleById(schedule_id);
-      console.log("Schedule Response:", scheduleResponse);
 
-      // Kiểm tra scheduleResponse trực tiếp, không qua .data
       if (!scheduleResponse || !scheduleResponse._id) {
-        throw new Error("Không tìm thấy thông tin lịch học");
+        throw new Error("Schedule information not found");
       }
 
-      console.log("ClassInfo from schedule:", scheduleResponse.classInfo_id);
       setSchedule(scheduleResponse);
 
-      // Bước 2: Lấy thông tin chi tiết của lớp học
-      const classInfoId = scheduleResponse.classInfo_id._id;
-      console.log("Using ClassInfo ID:", classInfoId);
-
-      const classResponse = await getClassById(classInfoId);
-      console.log("Class Response:", classResponse);
-
-      // Kiểm tra classResponse trực tiếp, không qua .data
-      if (!classResponse || !classResponse._id) {
-        throw new Error("Không tìm thấy thông tin lớp học");
+      // Step 2: Get class information
+      let classInfoId;
+      if (scheduleResponse.classInfo_id && scheduleResponse.classInfo_id._id) {
+        classInfoId = scheduleResponse.classInfo_id._id;
+      } else if (scheduleResponse.classInfo_id) {
+        classInfoId = scheduleResponse.classInfo_id;
+      } else {
+        throw new Error("Schedule does not have valid class information");
       }
 
-      console.log(
-        "Class Enrollments:",
-        classResponse.enrollments?.length || 0,
-        "students"
-      );
+      const classResponse = await getClassById(classInfoId);
+
+      if (!classResponse || !classResponse._id) {
+        throw new Error("Class information not found");
+      }
+
       setClassInfo(classResponse);
 
-      // Bước 3: Lấy thông tin điểm danh hiện có
+      // Step 3: Get current attendance
       const attendanceResponse = await getAttendanceBySchedule(schedule_id);
-      console.log("Attendance Response:", attendanceResponse);
 
-      // Bước 4: Khởi tạo trạng thái điểm danh
+      // Step 4: Initialize attendance states
       const initialAttendances = {};
 
       if (attendanceResponse && attendanceResponse.length > 0) {
-        // Nếu đã có điểm danh, sử dụng dữ liệu có sẵn
         attendanceResponse.forEach((attendance) => {
           initialAttendances[attendance.student_id._id] = attendance.status;
         });
-        console.log("Loaded existing attendance states:", initialAttendances);
       } else {
-        // Nếu chưa có điểm danh, khởi tạo tất cả là "absent"
         classResponse.enrollments.forEach((enrollment) => {
           initialAttendances[enrollment.student_id._id] = "absent";
         });
-        console.log(
-          "Initialized default attendance states:",
-          initialAttendances
-        );
       }
 
       setStudentAttendances(initialAttendances);
 
-      // Cập nhật pagination
+      // Update pagination
       setPagination((prev) => ({
         ...prev,
         total: classResponse.enrollments.length,
       }));
 
-      console.log("Data fetching completed successfully");
     } catch (error) {
-      console.error("Error in fetchData:", error);
-      message.error(
-        error.message || "Không thể tải dữ liệu. Vui lòng thử lại sau."
-      );
+      message.error(error.message || "Failed to load data. Please try again later.");
     } finally {
       setLoading(false);
     }
   }, [schedule_id]);
 
-  // Sửa lại useEffect
+  // Sửa lại useEffect để tránh gọi nhiều lần
   useEffect(() => {
     console.log("UseEffect triggered with schedule_id:", schedule_id);
-    fetchData();
+    const fetchDataPromise = fetchData();
+    return () => {
+      // Cleanup function
+      console.log("Cleaning up fetchData");
+    };
   }, [fetchData]);
 
   // Handle attendance change
@@ -225,6 +210,14 @@ const ListAttendance = ({ basePath, customPermissions }) => {
   const handleSubmit = async () => {
     try {
       setSubmitting(true);
+      
+      // Get tutor_id from user context
+      const tutor_id = user?.profile?._id;
+      
+      if (!tutor_id) {
+        throw new Error("Instructor information not found. Please log in again.");
+      }
+
       const attendances = Object.entries(studentAttendances).map(
         ([student_id, status]) => ({
           student_id,
@@ -235,29 +228,15 @@ const ListAttendance = ({ basePath, customPermissions }) => {
       const payload = {
         class_schedule_id: schedule_id,
         attendances,
+        tutor_id
       };
 
-      // Log chi tiết hơn
-      console.log("Schedule ID:", schedule_id);
-      console.log("Student Attendances:", studentAttendances);
-      console.log("Formatted Attendances:", attendances);
-      console.log("Full Payload:", payload);
-
       const response = await bulkAttendance(payload);
-      console.log("Success Response:", response);
 
       message.success("Attendance recorded successfully");
       navigate(0);
     } catch (error) {
-      console.error("Error Details:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-      });
-
-      // Hiển thị lỗi cụ thể từ server
-      const errorMessage =
-        error.response?.data?.error || "Failed to record attendance";
+      const errorMessage = error.response?.data?.error || error.message || "Failed to record attendance";
       message.error(errorMessage);
     } finally {
       setSubmitting(false);

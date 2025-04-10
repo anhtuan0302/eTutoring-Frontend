@@ -11,7 +11,7 @@ import { TutorProfilePage } from "../pages/tutor/auth/profile";
 import { ListClassesPage, DetailClassPage } from "../pages/tutor/education/classInfo";
 import { ClassSchedulePage } from "../pages/tutor/education/classSchedule";
 import { SubmissionDetailPage } from "../pages/tutor/education/submission";
-
+import { ListAttendancePage } from "../pages/tutor/education/attendance";
 const TutorRoutes = () => {
 
     return (
@@ -27,6 +27,8 @@ const TutorRoutes = () => {
             <Route path="classInfo/:id" element={<DetailClassPage />} />
 
             <Route path="classSchedule" element={<ClassSchedulePage />} />
+
+            <Route path="attendance/schedule/:id" element={<ListAttendancePage />} />
 
             <Route path="submission/:id" element={<SubmissionDetailPage />} />
             

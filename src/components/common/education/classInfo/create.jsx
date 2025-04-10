@@ -395,7 +395,7 @@ const CreateClass = ({ basePath, customPermissions }) => {
         item.description.toLowerCase().includes(inputValue.toLowerCase())
       }
       listStyle={{
-        width: 500,
+        width: 350,
         height: 400,
       }}
       style={{ marginTop: 20 }}
@@ -417,7 +417,7 @@ const CreateClass = ({ basePath, customPermissions }) => {
           item.description.toLowerCase().includes(inputValue.toLowerCase())
         }
         listStyle={{
-          width: 500,
+          width: 350,
           height: 400,
         }}
         style={{ marginTop: 20 }}
