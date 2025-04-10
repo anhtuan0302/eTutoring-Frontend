@@ -415,10 +415,10 @@ const PreviewContent = ({ media }) => {
 };
 
 // ReactionButtons Component
-  const ReactionButtons = ({ post }) => {
-    const [reactionCounts, setReactionCounts] = useState({});
-    const [userReaction, setUserReaction] = useState(null);
-    const [loading, setLoading] = useState(false);
+const ReactionButtons = ({ post }) => {
+  const [reactionCounts, setReactionCounts] = useState({});
+  const [userReaction, setUserReaction] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [isReactionModalVisible, setIsReactionModalVisible] = useState(false);
   const { user } = useAuth();
 
@@ -525,7 +525,7 @@ const PreviewContent = ({ media }) => {
     },
   };
 
-    useEffect(() => {
+  useEffect(() => {
     if (!user || !post?.reactions) return;
 
     // Tìm reaction của current user trong danh sách reactions
@@ -540,18 +540,18 @@ const PreviewContent = ({ media }) => {
     }
 
     // Tính toán số lượng reaction
-      if (post.reactions) {
-        const counts = Object.values(REACTION_TYPES).reduce((acc, type) => {
+    if (post.reactions) {
+      const counts = Object.values(REACTION_TYPES).reduce((acc, type) => {
         acc[type] = Object.values(post.reactions).filter(
-            (r) => r.reaction_type === type
-          ).length;
-          return acc;
-        }, {});
-        setReactionCounts(counts);
-      }
+          (r) => r.reaction_type === type
+        ).length;
+        return acc;
+      }, {});
+      setReactionCounts(counts);
+    }
   }, [post.reactions, user]);
 
-    const handleReaction = async (type) => {
+  const handleReaction = async (type) => {
     if (loading || !user) {
       if (!user) {
         message.warning("Please login to react to posts");
@@ -559,8 +559,8 @@ const PreviewContent = ({ media }) => {
       return;
     }
 
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
       // Nếu user click vào reaction hiện tại, xóa reaction
       if (userReaction === type) {
@@ -577,13 +577,13 @@ const PreviewContent = ({ media }) => {
         });
         setUserReaction(type);
       }
-      } catch (error) {
+    } catch (error) {
       console.error("Error handling reaction:", error);
       message.error("Failed to handle reaction");
-      } finally {
-        setLoading(false);
-      }
-    };
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const totalReactions = Object.values(reactionCounts).reduce(
     (a, b) => a + b,
@@ -591,14 +591,14 @@ const PreviewContent = ({ media }) => {
   );
   const currentReaction = reactionIcons[userReaction];
 
-          return (
+  return (
     <div className="reactions-wrapper">
       <div className="reactions-popup">
         {Object.entries(reactionIcons).map(([type, { icon, label, color }]) => (
           <Tooltip key={type} title={label}>
             <div
               className="reaction-icon"
-                onClick={() => handleReaction(type)}
+              onClick={() => handleReaction(type)}
               style={{ padding: "8px" }}
             >
               <span style={{ fontSize: "24px" }}>{icon}</span>
@@ -606,27 +606,41 @@ const PreviewContent = ({ media }) => {
           </Tooltip>
         ))}
       </div>
-      <Button
-        type="text"
-        icon={
-          currentReaction
-            ? currentReaction.icon
-            : reactionIcons.like.inactiveIcon
-        }
-                style={{
-          color: currentReaction ? currentReaction.color : undefined,
-          fontSize: "14px",
-        }}
-        className={`reaction-button ${userReaction ? "selected" : ""}`}
-        onClick={() => handleReaction(userReaction || "like")} // Thay đổi này
-      >
-        {userReaction
-          ? userReaction.charAt(0).toUpperCase() + userReaction.slice(1)
-          : "Like"}
-        {totalReactions > 0 && (
-          <span style={{ marginLeft: 4 }}>({totalReactions})</span>
-        )}
-              </Button>
+      <Space>
+        <Button
+          type="text"
+          icon={
+            currentReaction
+              ? currentReaction.icon
+              : reactionIcons.like.inactiveIcon
+          }
+          style={{
+            color: currentReaction ? currentReaction.color : undefined,
+            fontSize: "14px",
+          }}
+          className={`reaction-button ${userReaction ? "selected" : ""}`}
+          onClick={() => setIsReactionModalVisible(true)}
+        >
+          {userReaction
+            ? userReaction.charAt(0).toUpperCase() + userReaction.slice(1)
+            : "Like"}
+
+          {totalReactions > 0 && (
+            <span
+              onClick={() => setIsReactionModalVisible(true)}
+              style={{
+                fontSize: "14px",
+                cursor: "pointer",
+                backgroundColor: "#f0f2f5",
+                padding: "2px 8px",
+                borderRadius: "10px",
+              }}
+            >
+              ({totalReactions})
+            </span>
+          )}
+        </Button>
+      </Space>
 
       <ReactionListModal
         visible={isReactionModalVisible}
@@ -767,11 +781,10 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
   const [previewMedia, setPreviewMedia] = useState(null);
   const [editingCommentId, setEditingCommentId] = useState(null);
   const [editingContent, setEditingContent] = useState("");
-  const [localComments, setLocalComments] = useState([]); // Thêm state mới này
+  const [localComments, setLocalComments] = useState([]);
   const { user } = useAuth();
   const { modal } = App.useApp();
 
-  // Cập nhật useEffect để quản lý comments
   useEffect(() => {
     let unsubscribe;
     if (visible && post?._id) {
@@ -782,6 +795,10 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
             ? [...comments].sort((a, b) => b.created_at - a.created_at)
             : [];
           setLocalComments(sortedComments);
+
+          if (post && comments) {
+            post.comments_count = comments.length;
+          }
         }
       );
     }
@@ -790,7 +807,7 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
         unsubscribe();
       }
     };
-  }, [visible, post?._id]);
+  }, [visible, post]);
 
   const handleSubmit = async () => {
     if (!commentContent.trim() || submitting) return;
@@ -840,15 +857,30 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
         try {
           await firebaseBlogService.deleteComment(post._id, commentId);
           message.success("Comment deleted successfully");
-    } catch (error) {
+        } catch (error) {
           console.error("Delete comment error:", error);
-      message.error("Failed to delete comment");
-    }
+          message.error("Failed to delete comment");
+        }
       },
     });
   };
 
-    return (
+  const handlePreviewAttachment = (attachment) => {
+    setPreviewMedia(attachment);
+    setPreviewVisible(true);
+  };
+
+  const hasAttachments =
+    Array.isArray(post.attachments) && post.attachments.length > 0;
+
+  const calculateModalHeight = () => {
+    if (!hasAttachments) {
+      return "calc(100vh - 200px)";
+    }
+    return "calc(100vh - 200px)";
+  };
+
+  return (
     <Modal
       open={visible}
       title={`Comments (${localComments.length})`}
@@ -858,7 +890,10 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
       centered
       bodyStyle={{
         padding: 0,
-        height: "calc(100vh - 200px)",
+        maxHeight: "70vh",
+        overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
       }}
     >
       <div
@@ -866,11 +901,18 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
           height: "100%",
           display: "flex",
           flexDirection: "column",
-          padding: "24px",
+          padding: "16px",
+          overflow: "hidden",
         }}
       >
-        {/* Post Author Info - Fixed */}
-        <div style={{ marginBottom: 16, flexShrink: 0 }}>
+        <div
+          style={{
+            marginBottom: 16,
+            overflowY: hasAttachments ? "auto" : "visible",
+            maxHeight: hasAttachments ? "30vh" : "auto",
+            paddingRight: 8,
+          }}
+        >
           <Space align="start">
             <Avatar
               size={48}
@@ -906,36 +948,34 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
             </Space>
           </Space>
 
-          {/* Post Content */}
-      <div style={{ marginTop: 16 }}>
+          <div style={{ marginTop: 16 }}>
             <Paragraph style={{ fontSize: 15, whiteSpace: "pre-wrap" }}>
               {post.content}
             </Paragraph>
 
-            {/* Post Attachments */}
-            {post.attachments?.length > 0 && (
-              <AttachmentPreview
-                attachments={post.attachments}
-                onPreview={(media) => {
-                  setPreviewMedia(media);
-                  setPreviewVisible(true);
-                }}
-              />
+            {Array.isArray(post.attachments) && post.attachments.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <AttachmentPreview
+                  attachments={post.attachments}
+                  onPreview={handlePreviewAttachment}
+                />
+              </div>
             )}
           </div>
         </div>
 
-        <Divider style={{ margin: "12px 0" }} />
+        <Divider style={{ margin: "8px 0" }} />
 
-        {/* Comments List - Scrollable */}
         <div
           style={{
             flex: 1,
             overflowY: "auto",
-            marginBottom: 16,
-            minHeight: "200px",
+            marginBottom: 8,
             display: "flex",
             flexDirection: "column",
+            paddingRight: 8,
+            minHeight: "20vh",
+            maxHeight: "30vh",
           }}
         >
           <List
@@ -956,12 +996,12 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
             renderItem={(comment) => {
               if (!comment || !comment.author) return null;
 
-            return (
+              return (
                 <List.Item
                   actions={
                     comment.author._id === user?._id
                       ? [
-              <Button
+                          <Button
                             type="link"
                             key="edit"
                             onClick={() => {
@@ -1036,7 +1076,7 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
                             style={{ borderRadius: "0 8px 8px 0" }}
                           >
                             Save
-              </Button>
+                          </Button>
                           <Button
                             onClick={() => {
                               setEditingCommentId(null);
@@ -1057,16 +1097,13 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
               );
             }}
           />
-      </div>
+        </div>
 
-        {/* Comment Input - Fixed at bottom */}
         <div
           style={{
             flexShrink: 0,
-            position: "sticky",
-            bottom: 0,
             backgroundColor: "#fff",
-            paddingTop: 16,
+            paddingTop: 8,
             boxShadow: "0 -2px 8px rgba(0,0,0,0.06)",
           }}
         >
@@ -1090,13 +1127,23 @@ const CommentModal = ({ post, visible, onClose, onCommentSubmit }) => {
           </Space.Compact>
         </div>
       </div>
+
+      <Modal
+        open={previewVisible}
+        title={previewMedia?.name || previewMedia?.file_name || "Preview"}
+        footer={null}
+        onCancel={() => setPreviewVisible(false)}
+        width={800}
+        centered
+      >
+        {previewMedia && <PreviewContent media={previewMedia} />}
+      </Modal>
     </Modal>
   );
 };
 
 // Post Component
 const Post = ({ basePath }) => {
-  // States
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pendingPosts, setPendingPosts] = useState([]);
@@ -1119,7 +1166,6 @@ const Post = ({ basePath }) => {
   const { user } = useAuth();
   const { modal } = App.useApp();
 
-  // Permissions
   const permissions = useMemo(() => {
     if (!user)
       return {
@@ -1133,14 +1179,14 @@ const Post = ({ basePath }) => {
       return {
         canCreate: true,
         canModerate: true,
-        canDelete: true, // Admin có thể xóa tất cả bài viết
+        canDelete: true,
         canEdit: true,
       };
     } else if (["staff", "tutor"].includes(user.role)) {
       return {
         canCreate: true,
         canModerate: false,
-        canDelete: "student", // staff/tutor chỉ có thể xóa bài của student
+        canDelete: "student",
         canEdit: true,
       };
     } else {
@@ -1153,45 +1199,79 @@ const Post = ({ basePath }) => {
     }
   }, [user]);
 
-  // Fetch posts
   const fetchPosts = useCallback(() => {
     setLoading(true);
-    
-    // Lưu trữ tất cả unsubscribe functions
+
     const unsubscribers = [];
-  
+
     try {
-      // Subscribe to posts collection
-      const unsubscribePosts = firebaseBlogService.subscribeToAllPosts((allPosts) => {
-        if (Array.isArray(allPosts)) {
-          // Lọc và sắp xếp posts
-          const approved = [];
-          const pending = [];
-          
-          allPosts.forEach(post => {
-            if (post.is_approved) {
-              approved.push(post);
-            } else {
-              pending.push(post);
-            }
-          });
-  
-          // Sắp xếp theo thời gian mới nhất
-          approved.sort((a, b) => b.created_at - a.created_at);
-          pending.sort((a, b) => b.created_at - a.created_at);
-  
-          // Cập nhật state
-          setPosts(approved);
-          setPendingPosts(pending);
-          setLoading(false);
+      const unsubscribePosts = firebaseBlogService.subscribeToAllPosts(
+        (allPosts) => {
+          if (Array.isArray(allPosts)) {
+            const approved = [];
+            const pending = [];
+
+            allPosts.forEach((post) => {
+              if (post._id) {
+                // Subscribe to comments
+                const unsubscribeComments =
+                  firebaseBlogService.subscribeToComments(
+                    post._id,
+                    (comments) => {
+                      post.comments_count = comments ? comments.length : 0;
+
+                      setPosts((prev) =>
+                        prev.map((p) =>
+                          p._id === post._id
+                            ? { ...p, comments_count: post.comments_count }
+                            : p
+                        )
+                      );
+                    }
+                  );
+
+                // Subscribe to reactions
+                const unsubscribeReactions =
+                  firebaseBlogService.subscribeToReactions(
+                    post._id,
+                    (reactions) => {
+                      if (post._id) {
+                        setPosts((prev) =>
+                          prev.map((p) =>
+                            p._id === post._id
+                              ? { ...p, reactions: reactions }
+                              : p
+                          )
+                        );
+                      }
+                    }
+                  );
+
+                unsubscribers.push(unsubscribeComments);
+                unsubscribers.push(unsubscribeReactions);
+              }
+
+              if (post.is_approved) {
+                approved.push(post);
+              } else {
+                pending.push(post);
+              }
+            });
+
+            approved.sort((a, b) => b.created_at - a.created_at);
+            pending.sort((a, b) => b.created_at - a.created_at);
+
+            setPosts(approved);
+            setPendingPosts(pending);
+            setLoading(false);
+          }
         }
-      });
-  
+      );
+
       unsubscribers.push(unsubscribePosts);
-  
-      // Return cleanup function
+
       return () => {
-        unsubscribers.forEach(unsub => unsub && unsub());
+        unsubscribers.forEach((unsub) => unsub && unsub());
       };
     } catch (error) {
       console.error("Error in fetchPosts:", error);
@@ -1199,23 +1279,10 @@ const Post = ({ basePath }) => {
       message.error("Failed to fetch posts");
     }
   }, []);
-  // Thêm useEffect riêng để cập nhật selectedPost khi có comments mới
-  useEffect(() => {
-    if (selectedPost) {
-      const post = posts.find((p) => p._id === selectedPost._id);
-      if (
-        post &&
-        JSON.stringify(post.comments) !== JSON.stringify(selectedPost.comments)
-      ) {
-        setSelectedPost(post);
-      }
-    }
-  }, [posts, selectedPost]);
 
   useEffect(() => {
     if (!user || !posts.length) return;
 
-    // Chỉ xử lý với những post chưa được đánh dấu là đã xem
     posts.forEach(async (post) => {
       if (!viewedPosts.has(post._id)) {
         try {
@@ -1227,10 +1294,9 @@ const Post = ({ basePath }) => {
             role: user.role,
           });
 
-          // Đánh dấu post đã được xem
           setViewedPosts((prev) => new Set([...prev, post._id]));
 
-          console.log(`Added view for post: ${post._id}`); // Debug log
+          console.log(`Added view for post: ${post._id}`);
         } catch (error) {
           console.error("Error adding view:", error);
         }
@@ -1238,7 +1304,6 @@ const Post = ({ basePath }) => {
     });
   }, [posts, user]);
 
-  // Sửa lại useEffect để cleanup đúng cách
   useEffect(() => {
     const cleanup = fetchPosts();
     return () => {
@@ -1248,7 +1313,6 @@ const Post = ({ basePath }) => {
 
   useEffect(() => {
     return () => {
-      // Cleanup temporary URLs when component unmounts
       attachments.forEach((file) => {
         if (file.preview?.url) {
           URL.revokeObjectURL(file.preview.url);
@@ -1262,7 +1326,6 @@ const Post = ({ basePath }) => {
 
   useEffect(() => {
     if (selectedPost && commentModalVisible) {
-      // Subscribe to comments when modal is opened
       const unsubscribe = firebaseBlogService.subscribeToComments(
         selectedPost._id,
         (comments) => {
@@ -1290,7 +1353,6 @@ const Post = ({ basePath }) => {
     };
   };
 
-  // Render Functions
   const renderCreatePost = () => (
     <Card
       style={{
@@ -1308,11 +1370,11 @@ const Post = ({ basePath }) => {
             icon={!user?.avatar_path && <UserOutlined />}
             style={{ flexShrink: 0 }}
           />
-        <TextArea
-          placeholder="What's on your mind?"
-          value={newPostContent}
-          onChange={(e) => setNewPostContent(e.target.value)}
-          autoSize={{ minRows: 3, maxRows: 6 }}
+          <TextArea
+            placeholder="What's on your mind?"
+            value={newPostContent}
+            onChange={(e) => setNewPostContent(e.target.value)}
+            autoSize={{ minRows: 3, maxRows: 6 }}
             style={{
               borderRadius: 8,
               backgroundColor: "#f5f5f5",
@@ -1320,7 +1382,7 @@ const Post = ({ basePath }) => {
               width: "100%",
               resize: "none",
             }}
-            disabled={loading} // Disable khi đang loading
+            disabled={loading}
           />
         </div>
 
@@ -1374,7 +1436,7 @@ const Post = ({ basePath }) => {
               setAttachments(validFiles);
             }}
             showUploadList={false}
-            disabled={loading} // Disable khi đang loading
+            disabled={loading}
           >
             <Button
               icon={<FileImageOutlined />}
@@ -1413,8 +1475,8 @@ const Post = ({ basePath }) => {
       }}
     >
       {permissions.canModerate && pendingPosts.length > 0 && (
-              <Button
-                type="primary"
+        <Button
+          type="primary"
           icon={<ClockCircleOutlined />}
           onClick={() => setIsPendingModalVisible(true)}
           style={{
@@ -1428,46 +1490,44 @@ const Post = ({ basePath }) => {
     </Space>
   );
 
-  // Handle post actions
   const handleCreatePost = async () => {
     if (!newPostContent.trim() && attachments.length === 0) {
       message.warning("Please add some content or attachments");
       return;
     }
-  
+
     try {
       setLoading(true);
       message.loading({ content: "Creating post...", key: "post-create" });
-  
-      // Lưu content và attachments vào biến tạm
+
       const contentToPost = newPostContent.trim();
       const attachmentsToPost = [...attachments];
-  
-      // Reset form ngay lập tức
+
       setNewPostContent("");
       setAttachments([]);
-  
-      // Upload files và tạo post
+
       const formData = new FormData();
       formData.append("content", contentToPost);
-      formData.append("is_approved", ["admin", "staff", "tutor"].includes(user.role));
-  
-      attachmentsToPost.forEach(file => {
+      formData.append(
+        "is_approved",
+        ["admin", "staff", "tutor"].includes(user.role)
+      );
+
+      attachmentsToPost.forEach((file) => {
         if (file.originFileObj) {
           formData.append("attachments", file.originFileObj);
         }
       });
-  
+
       const response = await createPost(formData);
-  
+
       if (response?.data) {
-        // Cleanup attachment URLs
-        attachmentsToPost.forEach(file => {
+        attachmentsToPost.forEach((file) => {
           if (file.preview?.url) URL.revokeObjectURL(file.preview.url);
-          if (file.preview?.file_path) URL.revokeObjectURL(file.preview.file_path);
+          if (file.preview?.file_path)
+            URL.revokeObjectURL(file.preview.file_path);
         });
-  
-        // Tạo post data
+
         const postData = {
           _id: response.data._id,
           content: contentToPost,
@@ -1485,18 +1545,20 @@ const Post = ({ basePath }) => {
           comments: [],
           reactions: {},
           view_count: 0,
-          status: ["admin", "staff", "tutor"].includes(user.role) ? "approved" : "pending"
+          status: ["admin", "staff", "tutor"].includes(user.role)
+            ? "approved"
+            : "pending",
         };
-  
-        // Add to Firebase
+
         await firebaseBlogService.createPost(postData);
-  
+
         message.success({
-          content: user.role === "student" 
-            ? "Post created successfully and waiting for approval"
-            : "Post created successfully",
+          content:
+            user.role === "student"
+              ? "Post created successfully and waiting for approval"
+              : "Post created successfully",
           key: "post-create",
-          duration: 3
+          duration: 3,
         });
       }
     } catch (error) {
@@ -1504,7 +1566,7 @@ const Post = ({ basePath }) => {
       message.error({
         content: "Failed to create post",
         key: "post-create",
-        duration: 3
+        duration: 3,
       });
     } finally {
       setLoading(false);
@@ -1518,7 +1580,6 @@ const Post = ({ basePath }) => {
     }
 
     try {
-      // Nếu là student, cập nhật sẽ đưa bài viết về trạng thái chờ duyệt
       const updates = {
         content: editingPost.content.trim(),
         updated_at: Date.now(),
@@ -1530,7 +1591,6 @@ const Post = ({ basePath }) => {
 
       await firebaseBlogService.updatePost(postId, updates);
 
-      // Thông báo khác nhau cho student và admin/staff/tutor
       if (user.role === "student") {
         message.success("Post updated and waiting for re-approval");
       } else {
@@ -1570,7 +1630,6 @@ const Post = ({ basePath }) => {
       async onOk() {
         try {
           await firebaseBlogService.deletePost(postId);
-          // Cập nhật local state ngay lập tức
           setPosts((prevPosts) =>
             prevPosts.filter((post) => post._id !== postId)
           );
@@ -1605,7 +1664,6 @@ const Post = ({ basePath }) => {
 
       await firebaseBlogService.updatePost(postId, moderatorInfo);
 
-      // Không cần cập nhật state thủ công vì subscription sẽ tự động cập nhật
       message.success({
         content: `Post ${status ? "approved" : "rejected"} successfully`,
         duration: 3,
@@ -1625,7 +1683,6 @@ const Post = ({ basePath }) => {
         return;
       }
 
-      // Lấy và hiển thị danh sách người xem
       const viewers = await firebaseBlogService.getViewers(postId);
       setViewersList(viewers);
       setViewModalVisible(true);
@@ -1655,10 +1712,7 @@ const Post = ({ basePath }) => {
         is_deleted: false,
       };
 
-      // Thêm comment vào Firebase
       await firebaseBlogService.createComment(selectedPost._id, commentData);
-
-      // Không cần cập nhật state ở đây vì subscription sẽ tự động cập nhật
 
       message.success("Comment added successfully");
       return true;
@@ -1667,6 +1721,11 @@ const Post = ({ basePath }) => {
       message.error("Failed to add comment");
       return false;
     }
+  };
+
+  const handlePreviewAttachment = (attachment) => {
+    setPreviewMedia(attachment);
+    setPreviewVisible(true);
   };
 
   const renderPost = (post) => (
@@ -1694,7 +1753,6 @@ const Post = ({ basePath }) => {
         }}
       >
         <Space align="start">
-          {/* Avatar người đăng */}
           <Avatar
             size={48}
             src={
@@ -1708,22 +1766,21 @@ const Post = ({ basePath }) => {
           <Space direction="vertical" size={0}>
             <Space align="center">
               <Text strong style={{ fontSize: 16 }}>
-                    {post.author?.first_name} {post.author?.last_name}
-                  </Text>
-                  <Tag
-                    color={
-                      post.author?.role === "admin"
-                        ? "red"
-                        : post.author?.role === "staff"
-                        ? "blue"
-                        : post.author?.role === "tutor"
-                        ? "green"
-                        : "default"
-                    }
-                  >
-                    {post.author?.role?.toUpperCase()}
-                  </Tag>
-              {/* Dấu tích xác minh cho bài post của student đã được duyệt */}
+                {post.author?.first_name} {post.author?.last_name}
+              </Text>
+              <Tag
+                color={
+                  post.author?.role === "admin"
+                    ? "red"
+                    : post.author?.role === "staff"
+                    ? "blue"
+                    : post.author?.role === "tutor"
+                    ? "green"
+                    : "default"
+                }
+              >
+                {post.author?.role?.toUpperCase()}
+              </Tag>
               {post.author?.role === "student" &&
                 post.is_approved &&
                 post.moderator && (
@@ -1746,7 +1803,7 @@ const Post = ({ basePath }) => {
                             Verified by {post.moderator.first_name}{" "}
                             {post.moderator.last_name}
                           </Text>
-                </Space>
+                        </Space>
                         <div>
                           <Tag
                             color={
@@ -1771,7 +1828,7 @@ const Post = ({ basePath }) => {
                           {dayjs(post.moderator.moderated_at).format(
                             "MMM D, YYYY [at] h:mm A"
                           )}
-                  </Text>
+                        </Text>
                       </div>
                     }
                     color="#52c41a"
@@ -1789,7 +1846,6 @@ const Post = ({ basePath }) => {
                 )}
             </Space>
 
-            {/* Thời gian đăng bài */}
             <Text type="secondary" style={{ fontSize: 12, marginTop: 4 }}>
               {dayjs(post.created_at).format("MMM D, YYYY [at] h:mm A")}
               {post.updated_at !== post.created_at && !post.moderator && (
@@ -1801,7 +1857,6 @@ const Post = ({ basePath }) => {
           </Space>
         </Space>
 
-        {/* Edit/Delete dropdown */}
         {((permissions.canEdit && post.author._id === user?._id) ||
           user?.role === "admin" ||
           (["staff", "tutor"].includes(user?.role) &&
@@ -1842,7 +1897,6 @@ const Post = ({ basePath }) => {
         )}
       </div>
 
-      {/* Post Content */}
       <div style={{ marginTop: 16 }}>
         {editingPost?._id === post._id ? (
           <Space direction="vertical" style={{ width: "100%" }}>
@@ -1862,7 +1916,7 @@ const Post = ({ basePath }) => {
                 Save
               </Button>
               <Button onClick={() => setEditingPost(null)}>Cancel</Button>
-      </Space>
+            </Space>
           </Space>
         ) : (
           <>
@@ -1870,19 +1924,17 @@ const Post = ({ basePath }) => {
               {post.content}
             </Paragraph>
             {post.attachments?.length > 0 && (
-              <AttachmentPreview
-                attachments={post.attachments}
-                onPreview={(media) => {
-                  setPreviewMedia(media);
-                  setPreviewVisible(true);
-                }}
-              />
+              <div style={{ marginTop: 16 }}>
+                <AttachmentPreview
+                  attachments={post.attachments}
+                  onPreview={handlePreviewAttachment}
+                />
+              </div>
             )}
           </>
         )}
       </div>
 
-      {/* Post Actions */}
       <Divider style={{ margin: "16px 0" }} />
       <div
         style={{
@@ -1900,7 +1952,7 @@ const Post = ({ basePath }) => {
             setCommentModalVisible(true);
           }}
         >
-          {post.comments?.length || 0} Comments
+          {post.comments_count || 0} Comments
         </Button>
         <Button
           type="text"
@@ -1912,7 +1964,7 @@ const Post = ({ basePath }) => {
         >
           {post.view_count || 0} Views
         </Button>
-        </div>
+      </div>
     </Card>
   );
 
@@ -1944,7 +1996,7 @@ const Post = ({ basePath }) => {
           <Button key="cancel" onClick={onCancel}>
             Cancel
           </Button>,
-              <Button
+          <Button
             key="reject"
             type="primary"
             danger
@@ -1952,7 +2004,7 @@ const Post = ({ basePath }) => {
             onClick={handleSubmit}
           >
             Reject
-              </Button>,
+          </Button>,
         ]}
       >
         <TextArea
@@ -1982,57 +2034,55 @@ const Post = ({ basePath }) => {
     };
 
     const handleResubmit = async (post) => {
-        try {
-          // Tạo FormData để upload files
-          const formData = new FormData();
-          formData.append("content", editingPost.content || '');
-      
-          // Xử lý attachments
-          const cleanAttachments = [];
-          
-          // Xử lý các file mới được upload
-          const newFiles = editingPost.attachments?.filter(att => att.originFileObj) || [];
-          newFiles.forEach(file => {
-            formData.append("attachments", file.originFileObj);
-          });
-      
-          // Giữ lại các attachment cũ
-          const oldFiles = editingPost.attachments?.filter(att => !att.originFileObj) || [];
-          cleanAttachments.push(...oldFiles.map(file => ({
-            name: file.name || file.file_name || '',
-            file_name: file.file_name || file.name || '',
-            file_path: file.file_path || '',
-            url: file.url || `${staticURL}/${file.file_path}` || '',
-            type: file.type || ''
-          })));
-      
-          // Gửi request để upload files mới (nếu có)
-          let newAttachments = [];
-          if (newFiles.length > 0) {
-            const response = await createPost(formData);
-            if (response?.data?.attachments) {
-              newAttachments = response.data.attachments;
-            }
+      try {
+        const formData = new FormData();
+        formData.append("content", editingPost.content || "");
+
+        const cleanAttachments = [];
+
+        const newFiles =
+          editingPost.attachments?.filter((att) => att.originFileObj) || [];
+        newFiles.forEach((file) => {
+          formData.append("attachments", file.originFileObj);
+        });
+
+        const oldFiles =
+          editingPost.attachments?.filter((att) => !att.originFileObj) || [];
+        cleanAttachments.push(
+          ...oldFiles.map((file) => ({
+            name: file.name || file.file_name || "",
+            file_name: file.file_name || file.name || "",
+            file_path: file.file_path || "",
+            url: file.url || `${staticURL}/${file.file_path}` || "",
+            type: file.type || "",
+          }))
+        );
+
+        let newAttachments = [];
+        if (newFiles.length > 0) {
+          const response = await createPost(formData);
+          if (response?.data?.attachments) {
+            newAttachments = response.data.attachments;
           }
-      
-          // Combine old and new attachments
-          const updates = {
-            content: editingPost.content || '',
-            attachments: [...cleanAttachments, ...newAttachments],
-            updated_at: Date.now(),
-            status: "pending",
-            is_approved: false,
-            rejection_reason: null,
-          };
-      
-          await firebaseBlogService.updatePost(post._id, updates);
-          message.success("Post resubmitted successfully");
-          setEditingPost(null);
-        } catch (error) {
-          console.error("Resubmit error:", error);
-          message.error("Failed to resubmit post");
         }
-      };
+
+        const updates = {
+          content: editingPost.content || "",
+          attachments: [...cleanAttachments, ...newAttachments],
+          updated_at: Date.now(),
+          status: "pending",
+          is_approved: false,
+          rejection_reason: null,
+        };
+
+        await firebaseBlogService.updatePost(post._id, updates);
+        message.success("Post resubmitted successfully");
+        setEditingPost(null);
+      } catch (error) {
+        console.error("Resubmit error:", error);
+        message.error("Failed to resubmit post");
+      }
+    };
 
     const items = [
       {
@@ -2099,33 +2149,33 @@ const Post = ({ basePath }) => {
                       icon={!post.author?.avatar_path && <UserOutlined />}
                     />
                   }
-              title={
-                <Space>
-                  <Text strong>
-                    {post.author?.first_name} {post.author?.last_name}
-                  </Text>
-                  <Tag
-                    color={
-                      post.author?.role === "admin"
-                        ? "red"
-                        : post.author?.role === "staff"
-                        ? "blue"
-                        : post.author?.role === "tutor"
-                        ? "green"
-                        : "default"
-                    }
-                  >
-                    {post.author?.role?.toUpperCase()}
-                  </Tag>
-                </Space>
-              }
-              description={
+                  title={
+                    <Space>
+                      <Text strong>
+                        {post.author?.first_name} {post.author?.last_name}
+                      </Text>
+                      <Tag
+                        color={
+                          post.author?.role === "admin"
+                            ? "red"
+                            : post.author?.role === "staff"
+                            ? "blue"
+                            : post.author?.role === "tutor"
+                            ? "green"
+                            : "default"
+                        }
+                      >
+                        {post.author?.role?.toUpperCase()}
+                      </Tag>
+                    </Space>
+                  }
+                  description={
                     <>
                       <Text type="secondary" style={{ fontSize: 12 }}>
                         {dayjs(post.created_at).format(
                           "MMM D, YYYY [at] h:mm A"
                         )}
-                </Text>
+                      </Text>
                       <div style={{ marginTop: 8, whiteSpace: "pre-wrap" }}>
                         {post.content}
                       </div>
@@ -2207,14 +2257,14 @@ const Post = ({ basePath }) => {
                         type="error"
                         style={{ marginTop: 8, marginBottom: 8 }}
                       />
-              {editingPost?._id === post._id ? (
-                <Space direction="vertical" style={{ width: "100%" }}>
-                  <TextArea
-                    value={editingPost.content}
-                    onChange={(e) =>
+                      {editingPost?._id === post._id ? (
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                          <TextArea
+                            value={editingPost.content}
+                            onChange={(e) =>
                               setEditingPost({
                                 ...editingPost,
-                        content: e.target.value,
+                                content: e.target.value,
                               })
                             }
                             rows={4}
@@ -2235,20 +2285,20 @@ const Post = ({ basePath }) => {
                               Update Attachments
                             </Button>
                           </Upload>
-                  <Space>
-                    <Button
-                      type="primary"
+                          <Space>
+                            <Button
+                              type="primary"
                               onClick={() => handleResubmit(post)}
-                    >
+                            >
                               Resubmit
-                    </Button>
+                            </Button>
                             <Button onClick={() => setEditingPost(null)}>
                               Cancel
                             </Button>
-                  </Space>
-                </Space>
-              ) : (
-                <>
+                          </Space>
+                        </Space>
+                      ) : (
+                        <>
                           <div style={{ whiteSpace: "pre-wrap" }}>
                             {post.content}
                           </div>
@@ -2270,9 +2320,9 @@ const Post = ({ basePath }) => {
                               Edit & Resubmit
                             </Button>
                           )}
-                </>
-              )}
-            </div>
+                        </>
+                      )}
+                    </div>
                   }
                 />
               </List.Item>
@@ -2287,7 +2337,7 @@ const Post = ({ basePath }) => {
         <Modal
           open={visible}
           title={
-                          <Space>
+            <Space>
               <ClockCircleOutlined style={{ color: "#ffc107" }} />
               <span>Posts Management</span>
             </Space>
@@ -2311,26 +2361,17 @@ const Post = ({ basePath }) => {
     );
   };
 
-  // Main Render
   return (
     <App>
       <div className="post-container">
-        {/* Layout 2 cột cho phần create post và button */}
         {permissions.canCreate && (
           <div style={{ display: "flex", gap: "24px", marginBottom: 24 }}>
-            {/* Cột trái cho card đăng bài - col=18 */}
-            <div style={{ flex: "0 0 80%" }}>
-              {" "}
-              {/* 18/24 = 75% */}
-              {renderCreatePost()}
-            </div>
+            <div style={{ flex: "0 0 80%" }}> {renderCreatePost()}</div>
 
-            {/* Cột phải cho button - col=6 */}
             <div style={{ flex: "0 0 20%" }}>
               {" "}
-              {/* 6/24 = 25% */}
               {user && (
-                            <Button
+                <Button
                   type="primary"
                   icon={<ClockCircleOutlined />}
                   onClick={() => setIsPendingModalVisible(true)}
@@ -2338,20 +2379,18 @@ const Post = ({ basePath }) => {
                     width: "80%",
                     backgroundColor: "#ffc107",
                     borderColor: "#ffc107",
-                    alignSelf: "flex-end",
                   }}
                 >
                   {["admin", "staff", "tutor"].includes(user.role)
                     ? "Posts Awaiting"
                     : "Pending Posts"}{" "}
                   ({pendingPosts.length})
-                            </Button>
+                </Button>
               )}
             </div>
           </div>
         )}
 
-        {/* Rest of the content */}
         {loading ? (
           <div style={{ textAlign: "center", padding: "40px 0" }}>
             <Spin
@@ -2372,7 +2411,6 @@ const Post = ({ basePath }) => {
           />
         )}
 
-        {/* Pending Posts Modal */}
         <PendingPostsModal
           visible={isPendingModalVisible}
           onClose={() => setIsPendingModalVisible(false)}
@@ -2383,7 +2421,6 @@ const Post = ({ basePath }) => {
           setPreviewVisible={setPreviewVisible}
         />
 
-        {/* Comment Modal */}
         {selectedPost && (
           <CommentModal
             post={selectedPost}
@@ -2392,11 +2429,10 @@ const Post = ({ basePath }) => {
               setCommentModalVisible(false);
               setSelectedPost(null);
             }}
-            onCommentSubmit={(content) => handleModalCommentSubmit(content)} // Sửa lại chỗ này
+            onCommentSubmit={(content) => handleModalCommentSubmit(content)}
           />
         )}
 
-        {/* Preview Modal */}
         <Modal
           open={previewVisible}
           title={previewMedia?.name || previewMedia?.file_name}
@@ -2409,7 +2445,6 @@ const Post = ({ basePath }) => {
           {previewMedia && <PreviewContent media={previewMedia} />}
         </Modal>
 
-        {/* Viewers Modal */}
         <Modal
           open={viewModalVisible}
           title={`Viewers (${viewersList.length})`}
@@ -2465,7 +2500,7 @@ const Post = ({ basePath }) => {
             }}
           />
         </Modal>
-    </div>
+      </div>
     </App>
   );
 };

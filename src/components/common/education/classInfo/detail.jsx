@@ -1948,22 +1948,40 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           </span>
         ),
         children: (
-          <Table
-            columns={studentColumns}
-            dataSource={classInfo.enrollments}
-            rowKey={(record) => record._id}
-            pagination={{
-              showSizeChanger: true,
-              showTotal: (total) => `Total ${total} students`,
-            }}
-            rowSelection={{
-              selectedRowKeys: selectedStudentKeys,
-              onChange: (selectedRowKeys) => {
-                setSelectedStudentKeys(selectedRowKeys);
-              },
-            }}
-          />
-        ),
+          <div>
+            <Row justify="space-between" style={{ marginBottom: 16 }}>
+              <Col>
+                {selectedStudentKeys.length > 0 && (
+                  <Popconfirm
+                    title={`Are you sure you want to unenroll ${selectedStudentKeys.length} selected students?`}
+                    onConfirm={handleBulkUnenroll}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="primary" danger icon={<DeleteOutlined />}>
+                      Unenroll Selected ({selectedStudentKeys.length})
+                    </Button>
+                  </Popconfirm>
+                )}
+              </Col>
+            </Row>
+            <Table
+              columns={studentColumns}
+              dataSource={classInfo.enrollments}
+              rowKey={(record) => record._id}
+              pagination={{
+                showSizeChanger: true,
+                showTotal: (total) => `Total ${total} students`,
+              }}
+              rowSelection={{
+                selectedRowKeys: selectedStudentKeys,
+                onChange: (selectedRowKeys) => {
+                  setSelectedStudentKeys(selectedRowKeys);
+                },
+              }}
+            />
+          </div>
+        )
       },
       {
         key: "3",
@@ -1974,19 +1992,37 @@ const ClassDetail = ({ basePath, customPermissions }) => {
           </span>
         ),
         children: (
-          <Table
-            columns={tutorColumns}
-            dataSource={classInfo.tutors}
-            rowKey={(record) => record._id}
-            pagination={false}
-            rowSelection={{
-              selectedRowKeys: selectedTutorKeys,
-              onChange: (selectedRowKeys) => {
-                setSelectedTutorKeys(selectedRowKeys);
-              },
-            }}
-          />
-        ),
+          <div>
+            <Row justify="space-between" style={{ marginBottom: 16 }}>
+              <Col>
+                {selectedTutorKeys.length > 0 && (
+                  <Popconfirm
+                    title={`Are you sure you want to remove ${selectedTutorKeys.length} selected tutors?`}
+                    onConfirm={handleBulkRemoveTutors}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="primary" danger icon={<DeleteOutlined />}>
+                      Remove Tutors ({selectedTutorKeys.length})
+                    </Button>
+                  </Popconfirm>
+                )}
+              </Col>
+            </Row>
+            <Table
+              columns={tutorColumns}
+              dataSource={classInfo.tutors}
+              rowKey={(record) => record._id}
+              pagination={false}
+              rowSelection={{
+                selectedRowKeys: selectedTutorKeys,
+                onChange: (selectedRowKeys) => {
+                  setSelectedTutorKeys(selectedRowKeys);
+                },
+              }}
+            />
+          </div>
+        )
       },
       {
         key: "4",
@@ -2559,41 +2595,91 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   return (
     <div>
       <Space direction="vertical" size="large" style={{ width: "100%" }}>
-        <Row justify="space-between" align="middle">
-          <Space>
-            {selectedStudentKeys.length > 0 && (
-              <Popconfirm
-                title={`Are you sure you want to unenroll ${selectedStudentKeys.length} selected students?`}
-                onConfirm={handleBulkUnenroll}
-                okText="Yes"
-                cancelText="No"
-              >
-                <Button type="primary" danger icon={<DeleteOutlined />}>
-                  Unenroll Selected ({selectedStudentKeys.length})
-                </Button>
-              </Popconfirm>
-            )}
-            {selectedTutorKeys.length > 0 && (
-              <Popconfirm
-                title={`Are you sure you want to remove ${selectedTutorKeys.length} selected tutors?`}
-                onConfirm={handleBulkRemoveTutors}
-                okText="Yes"
-                cancelText="No"
-              >
-                <Button type="primary" danger icon={<DeleteOutlined />}>
-                  Remove Tutors ({selectedTutorKeys.length})
-                </Button>
-              </Popconfirm>
-            )}
-          </Space>
-        </Row>
-
         {/* Detailed Info Tabs */}
         <Card>
           <Tabs
             activeKey={activeTab}
             onChange={setActiveTab}
-            items={tabItems}
+            items={tabItems.map(item => {
+              if (item.key === "2") { // Students tab
+                return {
+                  ...item,
+                  children: (
+                    <div>
+                      <Row justify="space-between" style={{ marginBottom: 16 }}>
+                        <Col>
+                          {selectedStudentKeys.length > 0 && (
+                            <Popconfirm
+                              title={`Are you sure you want to unenroll ${selectedStudentKeys.length} selected students?`}
+                              onConfirm={handleBulkUnenroll}
+                              okText="Yes"
+                              cancelText="No"
+                            >
+                              <Button type="primary" danger icon={<DeleteOutlined />}>
+                                Unenroll Selected ({selectedStudentKeys.length})
+                              </Button>
+                            </Popconfirm>
+                          )}
+                        </Col>
+                      </Row>
+                      <Table
+                        columns={studentColumns}
+                        dataSource={classInfo.enrollments}
+                        rowKey={(record) => record._id}
+                        pagination={{
+                          showSizeChanger: true,
+                          showTotal: (total) => `Total ${total} students`,
+                        }}
+                        rowSelection={{
+                          selectedRowKeys: selectedStudentKeys,
+                          onChange: (selectedRowKeys) => {
+                            setSelectedStudentKeys(selectedRowKeys);
+                          },
+                        }}
+                      />
+                    </div>
+                  )
+                };
+              }
+              if (item.key === "3") { // Tutors tab
+                return {
+                  ...item,
+                  children: (
+                    <div>
+                      <Row justify="space-between" style={{ marginBottom: 16 }}>
+                        <Col>
+                          {selectedTutorKeys.length > 0 && (
+                            <Popconfirm
+                              title={`Are you sure you want to remove ${selectedTutorKeys.length} selected tutors?`}
+                              onConfirm={handleBulkRemoveTutors}
+                              okText="Yes"
+                              cancelText="No"
+                            >
+                              <Button type="primary" danger icon={<DeleteOutlined />}>
+                                Remove Tutors ({selectedTutorKeys.length})
+                              </Button>
+                            </Popconfirm>
+                          )}
+                        </Col>
+                      </Row>
+                      <Table
+                        columns={tutorColumns}
+                        dataSource={classInfo.tutors}
+                        rowKey={(record) => record._id}
+                        pagination={false}
+                        rowSelection={{
+                          selectedRowKeys: selectedTutorKeys,
+                          onChange: (selectedRowKeys) => {
+                            setSelectedTutorKeys(selectedRowKeys);
+                          },
+                        }}
+                      />
+                    </div>
+                  )
+                };
+              }
+              return item;
+            })}
           />
         </Card>
       </Space>
