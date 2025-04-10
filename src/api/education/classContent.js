@@ -25,7 +25,13 @@ export const updateContent = async (id, data) => {
 };
 
 export const deleteContent = async (id) => {
-  return api.delete(`/education/classContent/${id}`);
+  try {
+    const response = await api.delete(`/education/classContent/${id}`);
+    return response;
+  } catch (error) {
+    console.error('Error deleting content:', error);
+    throw error;
+  }
 };
 
 

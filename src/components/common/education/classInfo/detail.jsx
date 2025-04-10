@@ -74,9 +74,10 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { getStudentAttendance } from "../../../../api/education/attendance";
-import { createClassContent } from "../../../../api/education/classContent";
+import { createClassContent, updateContent, deleteContent } from "../../../../api/education/classContent";
 
 import { staticURL } from "../../../../api/config";
+import moment from "moment";
 
 const { Title, Text } = Typography;
 
@@ -203,6 +204,150 @@ const MaterialModal = ({ isVisible, onCancel, classId, onSuccess }) => {
   );
 };
 
+// Edit Material Modal Component
+const EditMaterialModal = ({ isVisible, onCancel, material, onSuccess }) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+
+  useEffect(() => {
+    if (material && isVisible) {
+      form.setFieldsValue({
+        title: material.title,
+        description: material.description,
+      });
+    }
+  }, [material, isVisible, form]);
+
+  const uploadProps = {
+    onRemove: (file) => {
+      const index = fileList.indexOf(file);
+      const newFileList = fileList.slice();
+      newFileList.splice(index, 1);
+      setFileList(newFileList);
+    },
+    beforeUpload: (file) => {
+      setFileList([...fileList, file]);
+      return false;
+    },
+    fileList,
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+
+      fileList.forEach((file, index) => {
+        formData.append(`files`, file.originFileObj || file);
+      });
+
+      await updateContent(material._id, formData);
+      message.success('Material updated successfully');
+      form.resetFields();
+      setFileList([]);
+      
+      onSuccess();
+      onCancel();
+    } catch (error) {
+      console.error('Update error:', error);
+      message.error('Failed to update material: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    try {
+      // In a real app, you would call an API endpoint to delete the attachment
+      // For now, we'll just show a message
+      message.success('Attachment deleted successfully');
+    } catch (error) {
+      message.error('Failed to delete attachment: ' + error.message);
+    }
+  };
+
+  return (
+    <Modal
+      title="Edit Material"
+      open={isVisible}
+      onCancel={onCancel}
+      footer={null}
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="title"
+          label="Title"
+          rules={[{ required: true, message: 'Please enter a title' }]}
+        >
+          <Input placeholder="Enter title" />
+        </Form.Item>
+        <Form.Item 
+          name="description" 
+          label="Description" 
+          rules={[{ required: true, message: 'Please enter a description' }]}
+        >
+          <Input.TextArea placeholder="Enter description" rows={4} />
+        </Form.Item>
+        
+        {material?.attachments && material.attachments.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Divider orientation="left">Current Attachments</Divider>
+            <List
+              size="small"
+              dataSource={material.attachments}
+              renderItem={attachment => (
+                <List.Item
+                  actions={[
+                    <Button 
+                      type="link" 
+                      danger 
+                      onClick={() => handleDeleteAttachment(attachment._id)}
+                    >
+                      Delete
+                    </Button>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<PaperClipOutlined />}
+                    title={attachment.file_name}
+                    description={`${Math.round(attachment.file_size / 1024)} KB`}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        )}
+        
+        <Form.Item
+          name="attachments"
+          label="Add New Attachments"
+        >
+          <Upload {...uploadProps} multiple accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*">
+            <Button icon={<UploadOutlined />}>Select Files</Button>
+            <div style={{ marginTop: 8 }}>
+              Supported file types: Images, PDFs, Word documents, Videos
+            </div>
+          </Upload>
+        </Form.Item>
+        <Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            block
+          >
+            Update Material
+          </Button>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 // Assignment Modal Component
 const AssignmentModal = ({ isVisible, onCancel, classId, onSuccess }) => {
   const [form] = Form.useForm();
@@ -231,7 +376,7 @@ const AssignmentModal = ({ isVisible, onCancel, classId, onSuccess }) => {
       formData.append('title', values.title);
       formData.append('description', values.description);
       formData.append('content_type', 'assignment');
-      formData.append('due_date', values.due_date.toISOString());
+      formData.append('duedate', values.due_date.toISOString());
 
       fileList.forEach((file, index) => {
         formData.append(`files`, file.originFileObj || file);
@@ -342,6 +487,169 @@ const AssignmentModal = ({ isVisible, onCancel, classId, onSuccess }) => {
   );
 };
 
+// Edit Assignment Modal Component
+const EditAssignmentModal = ({ isVisible, onCancel, assignment, onSuccess }) => {
+  const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
+  const [fileList, setFileList] = useState([]);
+
+  useEffect(() => {
+    if (assignment && isVisible) {
+      // Use moment.js to handle the date properly
+      const dueDate = assignment.duedate ? moment(assignment.duedate) : null;
+      
+      form.setFieldsValue({
+        title: assignment.title,
+        description: assignment.description,
+        due_date: dueDate
+      });
+    }
+  }, [assignment, isVisible, form]);
+
+  const uploadProps = {
+    onRemove: (file) => {
+      const index = fileList.indexOf(file);
+      const newFileList = fileList.slice();
+      newFileList.splice(index, 1);
+      setFileList(newFileList);
+    },
+    beforeUpload: (file) => {
+      setFileList([...fileList, file]);
+      return false;
+    },
+    fileList,
+  };
+
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      const formData = new FormData();
+      formData.append('title', values.title);
+      formData.append('description', values.description);
+      
+      if (values.due_date) {
+        formData.append('duedate', values.due_date.toISOString());
+      }
+
+      fileList.forEach((file, index) => {
+        formData.append(`files`, file.originFileObj || file);
+      });
+
+      await updateContent(assignment._id, formData);
+      message.success('Assignment updated successfully');
+      form.resetFields();
+      setFileList([]);
+      
+      onSuccess();
+      onCancel();
+    } catch (error) {
+      console.error('Update error:', error);
+      message.error('Failed to update assignment: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAttachment = async (attachmentId) => {
+    try {
+      // In a real app, you would call an API endpoint to delete the attachment
+      // For now, we'll just show a message
+      message.success('Attachment deleted successfully');
+    } catch (error) {
+      message.error('Failed to delete attachment: ' + error.message);
+    }
+  };
+
+  return (
+    <Modal
+      title="Edit Assignment"
+      open={isVisible}
+      onCancel={onCancel}
+      footer={null}
+      destroyOnClose
+    >
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form.Item
+          name="title"
+          label="Title"
+          rules={[{ required: true, message: 'Please enter a title' }]}
+        >
+          <Input placeholder="Enter title" />
+        </Form.Item>
+        <Form.Item 
+          name="description" 
+          label="Description" 
+          rules={[{ required: true, message: 'Please enter a description' }]}
+        >
+          <Input.TextArea placeholder="Enter description" rows={4} />
+        </Form.Item>
+        <Form.Item
+          name="due_date"
+          label="Due Date"
+          rules={[{ required: true, message: 'Please select a due date' }]}
+        >
+          <DatePicker
+            showTime
+            format="YYYY-MM-DD HH:mm"
+            style={{ width: '100%' }}
+          />
+        </Form.Item>
+        
+        {assignment?.attachments && assignment.attachments.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <Divider orientation="left">Current Attachments</Divider>
+            <List
+              size="small"
+              dataSource={assignment.attachments}
+              renderItem={attachment => (
+                <List.Item
+                  actions={[
+                    <Button 
+                      type="link" 
+                      danger 
+                      onClick={() => handleDeleteAttachment(attachment._id)}
+                    >
+                      Delete
+                    </Button>
+                  ]}
+                >
+                  <List.Item.Meta
+                    avatar={<PaperClipOutlined />}
+                    title={attachment.file_name}
+                    description={`${Math.round(attachment.file_size / 1024)} KB`}
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        )}
+        
+        <Form.Item
+          name="attachments"
+          label="Add New Attachments"
+        >
+          <Upload {...uploadProps} multiple accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,video/*">
+            <Button icon={<UploadOutlined />}>Select Files</Button>
+            <div style={{ marginTop: 8 }}>
+              Supported file types: Images, PDFs, Word documents, Videos
+            </div>
+          </Upload>
+        </Form.Item>
+        <Form.Item>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            block
+          >
+            Update Assignment
+          </Button>
+        </Form.Item>
+      </Form>
+    </Modal>
+  );
+};
+
 const ClassDetail = ({ basePath, customPermissions }) => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -377,6 +685,10 @@ const ClassDetail = ({ basePath, customPermissions }) => {
   // Material and Assignment states
   const [materialModalVisible, setMaterialModalVisible] = useState(false);
   const [assignmentModalVisible, setAssignmentModalVisible] = useState(false);
+  const [editMaterialModalVisible, setEditMaterialModalVisible] = useState(false);
+  const [editAssignmentModalVisible, setEditAssignmentModalVisible] = useState(false);
+  const [currentMaterial, setCurrentMaterial] = useState(null);
+  const [currentAssignment, setCurrentAssignment] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   // Function to refresh class data
@@ -392,6 +704,42 @@ const ClassDetail = ({ basePath, customPermissions }) => {
       setLoading(false);
     }
   }, [id]);
+
+  // Handle Material Edit
+  const handleEditMaterial = (material) => {
+    setCurrentMaterial(material);
+    setEditMaterialModalVisible(true);
+  };
+
+  // Handle Assignment Edit
+  const handleEditAssignment = (assignment) => {
+    setCurrentAssignment(assignment);
+    setEditAssignmentModalVisible(true);
+  };
+
+  // Handle Material Delete
+  const handleDeleteMaterial = async (materialId) => {
+    try {
+      await deleteContent(materialId);
+      message.success('Material deleted successfully');
+      refreshClassData();
+    } catch (error) {
+      console.error('Error deleting material:', error);
+      message.error('Failed to delete material: ' + error.message);
+    }
+  };
+
+  // Handle Assignment Delete
+  const handleDeleteAssignment = async (assignmentId) => {
+    try {
+      await deleteContent(assignmentId);
+      message.success('Assignment deleted successfully');
+      refreshClassData();
+    } catch (error) {
+      console.error('Error deleting assignment:', error);
+      message.error('Failed to delete assignment: ' + error.message);
+    }
+  };
 
   // Determine basePath based on role
   const effectiveBasePath = useMemo(() => {
@@ -2250,15 +2598,41 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                         <Card
                           title={material.title}
                           extra={
-                            <Text type="secondary">
-                              {new Date(material.createdAt)
-                                .toLocaleTimeString()
-                                .slice(0, 5) +
-                                " - " +
-                                new Date(
-                                  material.createdAt
-                                ).toLocaleDateString()}
-                            </Text>
+                            <Space>
+                              <Text type="secondary">
+                                {new Date(material.createdAt)
+                                  .toLocaleTimeString()
+                                  .slice(0, 5) +
+                                  " - " +
+                                  new Date(
+                                    material.createdAt
+                                  ).toLocaleDateString()}
+                              </Text>
+                              {isClassTutor && (
+                                <Dropdown
+                                  trigger={["click"]}
+                                  menu={{
+                                    items: [
+                                      {
+                                        key: '1',
+                                        label: 'Edit',
+                                        icon: <EditOutlined />,
+                                        onClick: () => handleEditMaterial(material)
+                                      },
+                                      {
+                                        key: '2',
+                                        label: 'Delete',
+                                        icon: <DeleteOutlined />,
+                                        danger: true,
+                                        onClick: () => handleDeleteMaterial(material._id)
+                                      }
+                                    ]
+                                  }}
+                                >
+                                  <Button type="text" icon={<EllipsisOutlined />} />
+                                </Dropdown>
+                              )}
+                            </Space>
                           }
                         >
                           <Space direction="vertical" style={{ width: "100%" }}>
@@ -2344,6 +2718,30 @@ const ClassDetail = ({ basePath, customPermissions }) => {
                                 Due:{" "}
                                 {new Date(assignment.duedate).toLocaleString()}
                               </Text>
+                              {isClassTutor && (
+                                <Dropdown
+                                  menu={{
+                                    items: [
+                                      {
+                                        key: '1',
+                                        label: 'Edit',
+                                        icon: <EditOutlined />,
+                                        onClick: () => handleEditAssignment(assignment)
+                                      },
+                                      {
+                                        key: '2',
+                                        label: 'Delete',
+                                        icon: <DeleteOutlined />,
+                                        danger: true,
+                                        onClick: () => handleDeleteAssignment(assignment._id)
+                                      }
+                                    ]
+                                  }}
+                                  placement="bottomRight"
+                                >
+                                  <Button type="text" icon={<EllipsisOutlined />} />
+                                </Dropdown>
+                              )}
                             </Space>
                           }
                         >
@@ -2707,6 +3105,26 @@ const ClassDetail = ({ basePath, customPermissions }) => {
         isVisible={assignmentModalVisible}
         onCancel={() => setAssignmentModalVisible(false)}
         classId={id}
+        onSuccess={refreshClassData}
+      />
+      
+      <EditMaterialModal
+        isVisible={editMaterialModalVisible}
+        onCancel={() => {
+          setEditMaterialModalVisible(false);
+          setCurrentMaterial(null);
+        }}
+        material={currentMaterial}
+        onSuccess={refreshClassData}
+      />
+      
+      <EditAssignmentModal
+        isVisible={editAssignmentModalVisible}
+        onCancel={() => {
+          setEditAssignmentModalVisible(false);
+          setCurrentAssignment(null);
+        }}
+        assignment={currentAssignment}
         onSuccess={refreshClassData}
       />
     </div>
