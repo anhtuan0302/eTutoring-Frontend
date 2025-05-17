@@ -1,3 +1,7 @@
+# Account
+
+Email: admin@gmail.com, Password: 123456
+
 # eTutoring Frontend
 
 eTutoring is a modern online learning platform that provides an interactive learning environment between teachers and students.
